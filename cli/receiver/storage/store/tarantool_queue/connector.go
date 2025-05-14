@@ -32,7 +32,7 @@ type Connector struct {
 
 func (c *Connector) Init(cfg map[string]string) error {
 	if cfg == nil {
-		return fmt.Errorf("не корректная ссылка на конфигурацию")
+		return fmt.Errorf("некорректная ссылка на конфигурацию")
 	}
 
 	c.config = cfg
@@ -60,7 +60,7 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 	c.connection, err = tarantool.Connect(conStr, opts)
 	if err != nil {
-		return fmt.Errorf("не удалось подключиться к tarantool: %v", err)
+		return fmt.Errorf("не удалось подключиться к Tarantool: %v", err)
 	}
 	c.queue = queue.New(c.connection, c.config["queue"])
 
@@ -69,12 +69,12 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 	if msg == nil {
-		return fmt.Errorf("не корректная ссылка на пакет")
+		return fmt.Errorf("некорректная ссылка на пакет")
 	}
 
 	innerPkg, err := msg.ToBytes()
 	if err != nil {
-		return fmt.Errorf("ошибка сериализации  пакета: %v", err)
+		return fmt.Errorf("ошибка сериализации пакета: %v", err)
 	}
 
 	_, err = c.queue.Put(innerPkg)

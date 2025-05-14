@@ -30,13 +30,13 @@ func (c *Connector) Init(cfg map[string]string) error {
 		err error
 	)
 	if cfg == nil {
-		return fmt.Errorf("не корректная ссылка на конфигурацию")
+		return fmt.Errorf("некорректная ссылка на конфигурацию")
 	}
 
 	c.config = cfg
 	conStr := fmt.Sprintf("amqp://%s:%s@%s:%s/", c.config["user"], c.config["password"], c.config["host"], c.config["port"])
 	if c.connection, err = amqp.Dial(conStr); err != nil {
-		return fmt.Errorf("ошибка установки соединеия RabbitMQ: %v", err)
+		return fmt.Errorf("ошибка установки соединения с RabbitMQ: %v", err)
 	}
 
 	if c.channel, err = c.connection.Channel(); err != nil {
@@ -48,12 +48,12 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 	if msg == nil {
-		return fmt.Errorf("не корректная ссылка на пакет")
+		return fmt.Errorf("некорректная ссылка на пакет")
 	}
 
 	innerPkg, err := msg.ToBytes()
 	if err != nil {
-		return fmt.Errorf("ошибка сериализации  пакета: %v", err)
+		return fmt.Errorf("ошибка сериализации пакета: %v", err)
 	}
 
 	if err = c.channel.Publish(

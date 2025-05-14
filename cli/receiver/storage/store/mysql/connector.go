@@ -28,23 +28,23 @@ func (c *Connector) Init(cfg map[string]string) error {
 		err error
 	)
 	if cfg == nil {
-		return fmt.Errorf("не корректная ссылка на конфигурацию")
+		return fmt.Errorf("некорректная ссылка на конфигурацию")
 	}
 	c.config = cfg
 
 	if c.connection, err = sql.Open("mysql", c.config["uri"]); err != nil {
-		return fmt.Errorf("ошибка подключения к mysql: %v", err)
+		return fmt.Errorf("ошибка подключения к MySQL: %v", err)
 	}
 
 	if err = c.connection.Ping(); err != nil {
-		return fmt.Errorf("mysql недоступен: %v", err)
+		return fmt.Errorf("MySQL недоступен: %v", err)
 	}
 	return err
 }
 
 func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 	if msg == nil {
-		return fmt.Errorf("не корректная ссылка на пакет")
+		return fmt.Errorf("некорректная ссылка на пакет")
 	}
 
 	innerPkg, err := msg.ToBytes()
@@ -54,7 +54,7 @@ func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 
 	insertQuery := fmt.Sprintf("INSERT INTO %s (point) VALUES (?)", c.config["table"])
 	if _, err = c.connection.Exec(insertQuery, innerPkg); err != nil {
-		return fmt.Errorf("не удалось вставить запись в mysql: %v", err)
+		return fmt.Errorf("не удалось вставить запись в MySQL: %v", err)
 	}
 	return nil
 }

@@ -31,13 +31,13 @@ func (c *Connector) Init(cfg map[string]string) error {
 		err error
 	)
 	if cfg == nil {
-		return fmt.Errorf("не корректная ссылка на конфигурацию")
+		return fmt.Errorf("некорректная ссылка на конфигурацию")
 	}
 	c.config = cfg
 
 	addr, ok := c.config["server"]
 	if !ok {
-		return fmt.Errorf("не задан адрес redis сервера")
+		return fmt.Errorf("не задан адрес Redis-сервера")
 	}
 
 	configDb := c.config["db"]
@@ -47,7 +47,7 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 	db, err := strconv.Atoi(configDb)
 	if err != nil {
-		return fmt.Errorf("не корретное имя redis бд: %v", err)
+		return fmt.Errorf("некорретное имя БД Redis: %v", err)
 	}
 
 	c.conn = redis.NewClient(&redis.Options{
@@ -58,23 +58,23 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 	c.queue, ok = c.config["queue"]
 	if !ok {
-		return fmt.Errorf("не корретное имя redis очереди")
+		return fmt.Errorf("некорретное имя Redis-очереди")
 	}
 	return err
 }
 
 func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 	if msg == nil {
-		return fmt.Errorf("не корректная ссылка на пакет")
+		return fmt.Errorf("некорректная ссылка на пакет")
 	}
 
 	innerPkg, err := msg.ToBytes()
 	if err != nil {
-		return fmt.Errorf("ошибка сериализации  пакета: %v", err)
+		return fmt.Errorf("ошибка сериализации пакета: %v", err)
 	}
 
 	if err := c.conn.Publish(context.Background(), c.queue, innerPkg).Err(); err != nil {
-		return fmt.Errorf("ошибка отправки  пакета в redis: %v", err)
+		return fmt.Errorf("ошибка отправки пакета в Redis: %v", err)
 	}
 
 	return nil

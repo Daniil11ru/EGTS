@@ -26,7 +26,7 @@ func (c *Connector) Init(cfg map[string]string) error {
 		err error
 	)
 	if cfg == nil {
-		return fmt.Errorf("не корректная ссылка на конфигурацию")
+		return fmt.Errorf("некорректная ссылка на конфигурацию")
 	}
 	c.config = cfg
 
@@ -41,19 +41,19 @@ func (c *Connector) Init(cfg map[string]string) error {
 	}
 
 	if c.connection, err = natsLib.Connect(c.config["servers"], options...); err != nil {
-		return fmt.Errorf("ошибка подключения к nats шине: %v", err)
+		return fmt.Errorf("ошибка подключения к NATS-шине: %v", err)
 	}
 	return err
 }
 
 func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 	if msg == nil {
-		return fmt.Errorf("не корректная ссылка на пакет")
+		return fmt.Errorf("некорректная ссылка на пакет")
 	}
 
 	innerPkg, err := msg.ToBytes()
 	if err != nil {
-		return fmt.Errorf("ошибка сериализации  пакета: %v", err)
+		return fmt.Errorf("ошибка сериализации пакета: %v", err)
 	}
 
 	if err = c.connection.Publish(c.config["topic"], innerPkg); err != nil {
