@@ -7,8 +7,8 @@ import (
 	"strconv"
 )
 
-//SrExtPosData структура подзаписи типа EGTS_SR_EXT_POS_DATA, которая используется абонентским
-//терминалом при передаче дополнительных данных определения местоположения
+// SrExtPosData структура подзаписи типа EGTS_SR_EXT_POS_DATA, которая используется абонентским
+// терминалом при передаче дополнительных данных определения местоположения
 type SrExtPosData struct {
 	NavigationSystemFieldExists   string `json:"NSFE"`
 	SatellitesFieldExists         string `json:"SFE"`
@@ -22,7 +22,7 @@ type SrExtPosData struct {
 	NavigationSystem              uint16 `json:"NS"`
 }
 
-//Decode разбирает байты в структуру подзаписи
+// Decode разбирает байты в структуру подзаписи
 func (e *SrExtPosData) Decode(content []byte) error {
 	var (
 		err   error
@@ -33,7 +33,7 @@ func (e *SrExtPosData) Decode(content []byte) error {
 
 	//байт флагов
 	if flags, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить байт флагов ext_pos_data: %v", err)
+		return fmt.Errorf("не удалось получить байт флагов ext_pos_data: %v", err)
 	}
 	flagBits := fmt.Sprintf("%08b", flags)
 
@@ -45,34 +45,34 @@ func (e *SrExtPosData) Decode(content []byte) error {
 
 	if e.VdopFieldExists == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить снижение точности в вертикальной плоскости: %v", err)
+			return fmt.Errorf("не удалось получить снижение точности в вертикальной плоскости: %v", err)
 		}
 		e.VerticalDilutionOfPrecision = binary.LittleEndian.Uint16(tmpBuf)
 	}
 
 	if e.HdopFieldExists == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить снижение точности в горизонтальной плоскости: %v", err)
+			return fmt.Errorf("не удалось получить снижение точности в горизонтальной плоскости: %v", err)
 		}
 		e.HorizontalDilutionOfPrecision = binary.LittleEndian.Uint16(tmpBuf)
 	}
 
 	if e.PdopFieldExists == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить снижение точности по местоположению: %v", err)
+			return fmt.Errorf("не удалось получить снижение точности по местоположению: %v", err)
 		}
 		e.PositionDilutionOfPrecision = binary.LittleEndian.Uint16(tmpBuf)
 	}
 
 	if e.SatellitesFieldExists == "1" {
 		if e.Satellites, err = buf.ReadByte(); err != nil {
-			return fmt.Errorf("Не удалось получить количество видимых спутников: %v", err)
+			return fmt.Errorf("не удалось получить количество видимых спутников: %v", err)
 		}
 	}
 
 	if e.NavigationSystemFieldExists == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить битовые флаги спутниковых систем: %v", err)
+			return fmt.Errorf("не удалось получить битовые флаги спутниковых систем: %v", err)
 		}
 		e.NavigationSystem = binary.LittleEndian.Uint16(tmpBuf)
 	}
@@ -80,7 +80,7 @@ func (e *SrExtPosData) Decode(content []byte) error {
 	return err
 }
 
-//Encode преобразовывает подзапись в набор байт
+// Encode преобразовывает подзапись в набор байт
 func (e *SrExtPosData) Encode() ([]byte, error) {
 	var (
 		err    error
@@ -94,40 +94,40 @@ func (e *SrExtPosData) Encode() ([]byte, error) {
 	flagsBits := "000" + e.NavigationSystemFieldExists + e.SatellitesFieldExists +
 		e.PdopFieldExists + e.HdopFieldExists + e.VdopFieldExists
 	if flags, err = strconv.ParseUint(flagsBits, 2, 8); err != nil {
-		return result, fmt.Errorf("Не удалось сгенерировать байт флагов ext_pos_data: %v", err)
+		return result, fmt.Errorf("не удалось сгенерировать байт флагов ext_pos_data: %v", err)
 	}
 
 	if err = buf.WriteByte(uint8(flags)); err != nil {
-		return result, fmt.Errorf("Не удалось записать байт флагов ext_pos_data: %v", err)
+		return result, fmt.Errorf("не удалось записать байт флагов ext_pos_data: %v", err)
 	}
 
 	if e.VdopFieldExists == "1" {
 		if err = binary.Write(buf, binary.LittleEndian, e.VerticalDilutionOfPrecision); err != nil {
-			return result, fmt.Errorf("Не удалось записать снижение точности в вертикальной плоскости: %v", err)
+			return result, fmt.Errorf("не удалось записать снижение точности в вертикальной плоскости: %v", err)
 		}
 	}
 
 	if e.HdopFieldExists == "1" {
 		if err = binary.Write(buf, binary.LittleEndian, e.HorizontalDilutionOfPrecision); err != nil {
-			return result, fmt.Errorf("Не удалось записать снижение точности в горизонтальной плоскости: %v", err)
+			return result, fmt.Errorf("не удалось записать снижение точности в горизонтальной плоскости: %v", err)
 		}
 	}
 
 	if e.PdopFieldExists == "1" {
 		if err = binary.Write(buf, binary.LittleEndian, e.PositionDilutionOfPrecision); err != nil {
-			return result, fmt.Errorf("Не удалось записать снижение точности по местоположению: %v", err)
+			return result, fmt.Errorf("не удалось записать снижение точности по местоположению: %v", err)
 		}
 	}
 
 	if e.SatellitesFieldExists == "1" {
 		if err = buf.WriteByte(e.Satellites); err != nil {
-			return result, fmt.Errorf("Не удалось записать количество видимых спутников: %v", err)
+			return result, fmt.Errorf("не удалось записать количество видимых спутников: %v", err)
 		}
 	}
 
 	if e.NavigationSystemFieldExists == "1" {
 		if err = binary.Write(buf, binary.LittleEndian, e.NavigationSystem); err != nil {
-			return result, fmt.Errorf("Не удалось записать битовые флаги спутниковых систем: %v", err)
+			return result, fmt.Errorf("не удалось записать битовые флаги спутниковых систем: %v", err)
 		}
 	}
 
@@ -135,7 +135,7 @@ func (e *SrExtPosData) Encode() ([]byte, error) {
 	return result, err
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (e *SrExtPosData) Length() uint16 {
 	var result uint16
 

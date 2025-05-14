@@ -12,6 +12,7 @@ topic = "receiver"
 
 import (
 	"fmt"
+
 	natsLib "github.com/nats-io/nats.go"
 )
 
@@ -25,7 +26,7 @@ func (c *Connector) Init(cfg map[string]string) error {
 		err error
 	)
 	if cfg == nil {
-		return fmt.Errorf("Не корректная ссылка на конфигурацию")
+		return fmt.Errorf("не корректная ссылка на конфигурацию")
 	}
 	c.config = cfg
 
@@ -40,23 +41,23 @@ func (c *Connector) Init(cfg map[string]string) error {
 	}
 
 	if c.connection, err = natsLib.Connect(c.config["servers"], options...); err != nil {
-		return fmt.Errorf("Ошибка подключения к nats шине: %v", err)
+		return fmt.Errorf("ошибка подключения к nats шине: %v", err)
 	}
 	return err
 }
 
 func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 	if msg == nil {
-		return fmt.Errorf("Не корректная ссылка на пакет")
+		return fmt.Errorf("не корректная ссылка на пакет")
 	}
 
 	innerPkg, err := msg.ToBytes()
 	if err != nil {
-		return fmt.Errorf("Ошибка сериализации  пакета: %v", err)
+		return fmt.Errorf("ошибка сериализации  пакета: %v", err)
 	}
 
 	if err = c.connection.Publish(c.config["topic"], innerPkg); err != nil {
-		return fmt.Errorf("Не удалось отправить сообщение в топик: %v", err)
+		return fmt.Errorf("не удалось отправить сообщение в топик: %v", err)
 	}
 	return nil
 }

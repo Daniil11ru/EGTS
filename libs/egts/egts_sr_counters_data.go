@@ -7,8 +7,8 @@ import (
 	"strconv"
 )
 
-//SrCountersData структура подзаписи типа EGTS_SR_COUNTERS_DATA, которая используется аппаратно-программным
-//комплексом для передачи на абонентский терминал данных о значении счетных входов
+// SrCountersData структура подзаписи типа EGTS_SR_COUNTERS_DATA, которая используется аппаратно-программным
+// комплексом для передачи на абонентский терминал данных о значении счетных входов
 type SrCountersData struct {
 	CounterFieldExists1 string `json:"CFE1"`
 	CounterFieldExists2 string `json:"CFE2"`
@@ -28,7 +28,7 @@ type SrCountersData struct {
 	Counter8            uint32 `json:"CN8"`
 }
 
-//Decode разбирает байты в структуру подзаписи
+// Decode разбирает байты в структуру подзаписи
 func (c *SrCountersData) Decode(content []byte) error {
 	var (
 		err        error
@@ -38,7 +38,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 	buf := bytes.NewReader(content)
 
 	if flags, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить байт цифровых выходов sr_counters_data: %v", err)
+		return fmt.Errorf("не удалось получить байт цифровых выходов sr_counters_data: %v", err)
 	}
 	flagBits := fmt.Sprintf("%08b", flags)
 
@@ -54,7 +54,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 	tmpBuf := make([]byte, 3)
 	if c.CounterFieldExists1 == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить показания CN1: %v", err)
+			return fmt.Errorf("не удалось получить показания CN1: %v", err)
 		}
 		counterVal = append(tmpBuf, 0x00)
 		c.Counter1 = binary.LittleEndian.Uint32(counterVal)
@@ -62,7 +62,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 
 	if c.CounterFieldExists2 == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить показания CN2: %v", err)
+			return fmt.Errorf("не удалось получить показания CN2: %v", err)
 		}
 		counterVal = append(tmpBuf, 0x00)
 		c.Counter1 = binary.LittleEndian.Uint32(counterVal)
@@ -70,7 +70,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 
 	if c.CounterFieldExists3 == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить показания CN3: %v", err)
+			return fmt.Errorf("не удалось получить показания CN3: %v", err)
 		}
 		counterVal = append(tmpBuf, 0x00)
 		c.Counter3 = binary.LittleEndian.Uint32(counterVal)
@@ -78,7 +78,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 
 	if c.CounterFieldExists4 == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить показания CN4: %v", err)
+			return fmt.Errorf("не удалось получить показания CN4: %v", err)
 		}
 		counterVal = append(tmpBuf, 0x00)
 		c.Counter4 = binary.LittleEndian.Uint32(counterVal)
@@ -86,7 +86,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 
 	if c.CounterFieldExists5 == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить показания CN5: %v", err)
+			return fmt.Errorf("не удалось получить показания CN5: %v", err)
 		}
 		counterVal = append(tmpBuf, 0x00)
 		c.Counter5 = binary.LittleEndian.Uint32(counterVal)
@@ -94,7 +94,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 
 	if c.CounterFieldExists6 == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить показания CN6: %v", err)
+			return fmt.Errorf("не удалось получить показания CN6: %v", err)
 		}
 		counterVal = append(tmpBuf, 0x00)
 		c.Counter6 = binary.LittleEndian.Uint32(counterVal)
@@ -102,7 +102,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 
 	if c.CounterFieldExists7 == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить показания CN7: %v", err)
+			return fmt.Errorf("не удалось получить показания CN7: %v", err)
 		}
 		counterVal = append(tmpBuf, 0x00)
 		c.Counter7 = binary.LittleEndian.Uint32(counterVal)
@@ -110,7 +110,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 
 	if c.CounterFieldExists8 == "1" {
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить показания CN8: %v", err)
+			return fmt.Errorf("не удалось получить показания CN8: %v", err)
 		}
 		counterVal = append(tmpBuf, 0x00)
 		c.Counter8 = binary.LittleEndian.Uint32(counterVal)
@@ -118,7 +118,7 @@ func (c *SrCountersData) Decode(content []byte) error {
 	return err
 }
 
-//Encode преобразовывает подзапись в набор байт
+// Encode преобразовывает подзапись в набор байт
 func (c *SrCountersData) Encode() ([]byte, error) {
 	var (
 		err    error
@@ -136,66 +136,66 @@ func (c *SrCountersData) Encode() ([]byte, error) {
 		c.CounterFieldExists1
 
 	if flags, err = strconv.ParseUint(flagsBits, 2, 8); err != nil {
-		return result, fmt.Errorf("Не удалось сгенерировать байт байт аналоговых выходов counters_data: %v", err)
+		return result, fmt.Errorf("не удалось сгенерировать байт байт аналоговых выходов counters_data: %v", err)
 	}
 	if err = buf.WriteByte(uint8(flags)); err != nil {
-		return result, fmt.Errorf("Не удалось записать байт байт аналоговых выходов counters_data: %v", err)
+		return result, fmt.Errorf("не удалось записать байт байт аналоговых выходов counters_data: %v", err)
 	}
 
 	sensVal := make([]byte, 4)
 	if c.CounterFieldExists1 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter1)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("Не удалось запистаь показания CN1: %v", err)
+			return result, fmt.Errorf("не удалось запистаь показания CN1: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists2 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter2)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("Не удалось запистаь показания CN2: %v", err)
+			return result, fmt.Errorf("не удалось запистаь показания CN2: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists3 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter3)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("Не удалось запистаь показания CN3: %v", err)
+			return result, fmt.Errorf("не удалось запистаь показания CN3: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists4 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter4)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("Не удалось запистаь показания CN4: %v", err)
+			return result, fmt.Errorf("не удалось запистаь показания CN4: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists5 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter5)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("Не удалось запистаь показания CN5: %v", err)
+			return result, fmt.Errorf("не удалось запистаь показания CN5: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists6 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter6)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("Не удалось запистаь показания CN6: %v", err)
+			return result, fmt.Errorf("не удалось запистаь показания CN6: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists7 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter7)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("Не удалось запистаь показания CN7: %v", err)
+			return result, fmt.Errorf("не удалось запистаь показания CN7: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists8 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter8)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("Не удалось запистаь показания CN8: %v", err)
+			return result, fmt.Errorf("не удалось запистаь показания CN8: %v", err)
 		}
 	}
 
@@ -204,7 +204,7 @@ func (c *SrCountersData) Encode() ([]byte, error) {
 	return result, err
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (c *SrCountersData) Length() uint16 {
 	var result uint16
 

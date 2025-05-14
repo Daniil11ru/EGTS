@@ -15,6 +15,7 @@ exchange_type = "topic"
 
 import (
 	"fmt"
+
 	"github.com/streadway/amqp"
 )
 
@@ -29,17 +30,17 @@ func (c *Connector) Init(cfg map[string]string) error {
 		err error
 	)
 	if cfg == nil {
-		return fmt.Errorf("Не корректная ссылка на конфигурацию")
+		return fmt.Errorf("не корректная ссылка на конфигурацию")
 	}
 
 	c.config = cfg
 	conStr := fmt.Sprintf("amqp://%s:%s@%s:%s/", c.config["user"], c.config["password"], c.config["host"], c.config["port"])
 	if c.connection, err = amqp.Dial(conStr); err != nil {
-		return fmt.Errorf("Ошибка установки соединеия RabbitMQ: %v", err)
+		return fmt.Errorf("ошибка установки соединеия RabbitMQ: %v", err)
 	}
 
 	if c.channel, err = c.connection.Channel(); err != nil {
-		return fmt.Errorf("Ошибка открытия канала RabbitMQ: %v", err)
+		return fmt.Errorf("ошибка открытия канала RabbitMQ: %v", err)
 	}
 
 	return err
@@ -47,12 +48,12 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 	if msg == nil {
-		return fmt.Errorf("Не корректная ссылка на пакет")
+		return fmt.Errorf("не корректная ссылка на пакет")
 	}
 
 	innerPkg, err := msg.ToBytes()
 	if err != nil {
-		return fmt.Errorf("Ошибка сериализации  пакета: %v", err)
+		return fmt.Errorf("ошибка сериализации  пакета: %v", err)
 	}
 
 	if err = c.channel.Publish(
@@ -64,7 +65,7 @@ func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 			ContentType: "text/plain",
 			Body:        innerPkg,
 		}); err != nil {
-		return fmt.Errorf("Ошибка отправки сырого пакета в RabbitMQ: %v", err)
+		return fmt.Errorf("ошибка отправки сырого пакета в RabbitMQ: %v", err)
 	}
 	return nil
 }

@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-//SrAuthInfo структура подзаписи типа EGTS_SR_AUTH_INFO, которая предназначена для передачи на
-//телематическую платформу аутентификационных данных АС с использованием ранее переданных
-//со стороны платформы параметров для осуществления шифрования данных.
+// SrAuthInfo структура подзаписи типа EGTS_SR_AUTH_INFO, которая предназначена для передачи на
+// телематическую платформу аутентификационных данных АС с использованием ранее переданных
+// со стороны платформы параметров для осуществления шифрования данных.
 type SrAuthInfo struct {
 	UserName       string `json:"UNM"`
 	UserPassword   string `json:"UPSW"`
@@ -27,20 +27,20 @@ func (e *SrAuthInfo) Decode(content []byte) error {
 	buf := bytes.NewBuffer(content)
 	tmpStr, err = buf.ReadString(sep)
 	if err != nil {
-		return fmt.Errorf("Не удалось считать имя пользователя sr_auth_info: %v", err)
+		return fmt.Errorf("не удалось считать имя пользователя sr_auth_info: %v", err)
 	}
 	e.UserName = strings.TrimSuffix(tmpStr, string(sep))
 
 	tmpStr, err = buf.ReadString(sep)
 	if err != nil {
-		return fmt.Errorf("Не удалось считать пароль sr_auth_info: %v", err)
+		return fmt.Errorf("не удалось считать пароль sr_auth_info: %v", err)
 	}
 	e.UserPassword = strings.TrimSuffix(tmpStr, string(sep))
 
 	if buf.Len() > 0 {
 		tmpStr, err = buf.ReadString(sep)
 		if err != nil {
-			return fmt.Errorf("Не удалось считать SS из sr_auth_info: %v", err)
+			return fmt.Errorf("не удалось считать SS из sr_auth_info: %v", err)
 		}
 		e.ServerSequence = strings.TrimSuffix(tmpStr, string(sep))
 	}
@@ -73,7 +73,7 @@ func (e *SrAuthInfo) Encode() ([]byte, error) {
 	return result, err
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (e *SrAuthInfo) Length() uint16 {
 	var result uint16
 

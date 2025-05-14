@@ -6,9 +6,9 @@ import (
 	"strconv"
 )
 
-//SrStateData структура подзаписи типа EGTS_SR_STATE_DATA, которая используется для передачи на
-//аппаратно-программный комплекс информации о состоянии абонентского терминала  (текущий режим работы,
-//напряжение основного и резервного источников питания и т.д.)
+// SrStateData структура подзаписи типа EGTS_SR_STATE_DATA, которая используется для передачи на
+// аппаратно-программный комплекс информации о состоянии абонентского терминала  (текущий режим работы,
+// напряжение основного и резервного источников питания и т.д.)
 type SrStateData struct {
 	State                  uint8  `json:"ST"`
 	MainPowerSourceVoltage uint8  `json:"MPSV"`
@@ -19,7 +19,7 @@ type SrStateData struct {
 	BBU                    string `json:"BBU"`
 }
 
-//Decode разбирает байты в структуру подзаписи
+// Decode разбирает байты в структуру подзаписи
 func (e *SrStateData) Decode(content []byte) error {
 	var (
 		err   error
@@ -28,23 +28,23 @@ func (e *SrStateData) Decode(content []byte) error {
 
 	buf := bytes.NewReader(content)
 	if e.State, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить текущий режим работы: %v", err)
+		return fmt.Errorf("не удалось получить текущий режим работы: %v", err)
 	}
 
 	if e.MainPowerSourceVoltage, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить значение напряжения основного источника питания: %v", err)
+		return fmt.Errorf("не удалось получить значение напряжения основного источника питания: %v", err)
 	}
 
 	if e.BackUpBatteryVoltage, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить значение напряжения резервной батареи: %v", err)
+		return fmt.Errorf("не удалось получить значение напряжения резервной батареи: %v", err)
 	}
 
 	if e.InternalBatteryVoltage, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить значение напряжения внутренней батареи: %v", err)
+		return fmt.Errorf("не удалось получить значение напряжения внутренней батареи: %v", err)
 	}
 
 	if flags, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить байт флагов state_data: %v", err)
+		return fmt.Errorf("не удалось получить байт флагов state_data: %v", err)
 	}
 	flagBits := fmt.Sprintf("%08b", flags)
 	e.NMS = flagBits[5:6]
@@ -54,7 +54,7 @@ func (e *SrStateData) Decode(content []byte) error {
 	return err
 }
 
-//Encode преобразовывает подзапись в набор байт
+// Encode преобразовывает подзапись в набор байт
 func (e *SrStateData) Encode() ([]byte, error) {
 	var (
 		err    error
@@ -64,27 +64,27 @@ func (e *SrStateData) Encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	if err = buf.WriteByte(e.State); err != nil {
-		return result, fmt.Errorf("Не удалось записать текущий режим работы: %v", err)
+		return result, fmt.Errorf("не удалось записать текущий режим работы: %v", err)
 	}
 
 	if err = buf.WriteByte(e.MainPowerSourceVoltage); err != nil {
-		return result, fmt.Errorf("Не удалось записать значение напряжения основного источника питания: %v", err)
+		return result, fmt.Errorf("не удалось записать значение напряжения основного источника питания: %v", err)
 	}
 
 	if err = buf.WriteByte(e.BackUpBatteryVoltage); err != nil {
-		return result, fmt.Errorf("Не удалось записать значение напряжения резервной батареи: %v", err)
+		return result, fmt.Errorf("не удалось записать значение напряжения резервной батареи: %v", err)
 	}
 
 	if err = buf.WriteByte(e.InternalBatteryVoltage); err != nil {
-		return result, fmt.Errorf("Не удалось записать значение напряжения внутренней батареи: %v", err)
+		return result, fmt.Errorf("не удалось записать значение напряжения внутренней батареи: %v", err)
 	}
 
 	if flags, err = strconv.ParseUint("00000"+e.NMS+e.IBU+e.BBU, 2, 8); err != nil {
-		return result, fmt.Errorf("Не удалось сгенерировать байт флагов state_data: %v", err)
+		return result, fmt.Errorf("не удалось сгенерировать байт флагов state_data: %v", err)
 	}
 
 	if err = buf.WriteByte(uint8(flags)); err != nil {
-		return result, fmt.Errorf("Не удалось записать байт флагов state_data: %v", err)
+		return result, fmt.Errorf("не удалось записать байт флагов state_data: %v", err)
 	}
 
 	result = buf.Bytes()
@@ -92,7 +92,7 @@ func (e *SrStateData) Encode() ([]byte, error) {
 	return result, err
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (e *SrStateData) Length() uint16 {
 	var result uint16
 

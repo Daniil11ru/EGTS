@@ -17,10 +17,11 @@ queue = "points"
 
 import (
 	"fmt"
-	"github.com/tarantool/go-tarantool"
-	"github.com/tarantool/go-tarantool/queue"
 	"strconv"
 	"time"
+
+	"github.com/tarantool/go-tarantool"
+	"github.com/tarantool/go-tarantool/queue"
 )
 
 type Connector struct {
@@ -31,7 +32,7 @@ type Connector struct {
 
 func (c *Connector) Init(cfg map[string]string) error {
 	if cfg == nil {
-		return fmt.Errorf("Не корректная ссылка на конфигурацию")
+		return fmt.Errorf("не корректная ссылка на конфигурацию")
 	}
 
 	c.config = cfg
@@ -39,15 +40,15 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 	maxRecons, err := strconv.Atoi(c.config["max_recons"])
 	if err != nil {
-		return fmt.Errorf("Не удалось получить MaxReconnects: %v", err)
+		return fmt.Errorf("не удалось получить MaxReconnects: %v", err)
 	}
 	timeout, err := strconv.Atoi(c.config["timeout"])
 	if err != nil {
-		return fmt.Errorf("Не удалось получить timeout: %v", err)
+		return fmt.Errorf("не удалось получить timeout: %v", err)
 	}
 	reconnect, err := strconv.Atoi(c.config["reconnect"])
 	if err != nil {
-		return fmt.Errorf("Не удалось получить reconnect: %v", err)
+		return fmt.Errorf("не удалось получить reconnect: %v", err)
 	}
 	opts := tarantool.Opts{
 		Timeout:       time.Duration(timeout) * time.Second,
@@ -59,7 +60,7 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 	c.connection, err = tarantool.Connect(conStr, opts)
 	if err != nil {
-		return fmt.Errorf("Не удалось подключиться к tarantool: %v", err)
+		return fmt.Errorf("не удалось подключиться к tarantool: %v", err)
 	}
 	c.queue = queue.New(c.connection, c.config["queue"])
 
@@ -68,17 +69,17 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 	if msg == nil {
-		return fmt.Errorf("Не корректная ссылка на пакет")
+		return fmt.Errorf("не корректная ссылка на пакет")
 	}
 
 	innerPkg, err := msg.ToBytes()
 	if err != nil {
-		return fmt.Errorf("Ошибка сериализации  пакета: %v", err)
+		return fmt.Errorf("ошибка сериализации  пакета: %v", err)
 	}
 
 	_, err = c.queue.Put(innerPkg)
 	if err != nil {
-		return fmt.Errorf("Не удалось отправить сообщение: %v", err)
+		return fmt.Errorf("не удалось отправить сообщение: %v", err)
 	}
 	return nil
 }

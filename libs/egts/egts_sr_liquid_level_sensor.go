@@ -7,8 +7,8 @@ import (
 	"strconv"
 )
 
-//SrLiquidLevelSensor структура подзаписи типа EGTS_SR_LIQUID_LEVEL_SENSOR, которая применяется
-//абонентским терминалом для передачи на аппаратно-программный комплекс данных о показаниях ДУЖ
+// SrLiquidLevelSensor структура подзаписи типа EGTS_SR_LIQUID_LEVEL_SENSOR, которая применяется
+// абонентским терминалом для передачи на аппаратно-программный комплекс данных о показаниях ДУЖ
 type SrLiquidLevelSensor struct {
 	LiquidLevelSensorErrorFlag string `json:"LLSEF"`
 	LiquidLevelSensorValueUnit string `json:"LLSVU"`
@@ -28,7 +28,7 @@ func (e *SrLiquidLevelSensor) Decode(content []byte) error {
 	buf := bytes.NewReader(content)
 
 	if flags, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить байт флагов liquid_level: %v", err)
+		return fmt.Errorf("не удалось получить байт флагов liquid_level: %v", err)
 	}
 	flagBits := fmt.Sprintf("%08b", flags)
 
@@ -37,19 +37,19 @@ func (e *SrLiquidLevelSensor) Decode(content []byte) error {
 	e.RawDataFlag = flagBits[4:5]
 
 	if sensNum, err = strconv.ParseUint(flagBits[5:], 2, 8); err != nil {
-		return fmt.Errorf("Не удалось получить номер датчика ДУЖ: %v", err)
+		return fmt.Errorf("не удалось получить номер датчика ДУЖ: %v", err)
 	}
 	e.LiquidLevelSensorNumber = uint8(sensNum)
 
 	bytesTmpBuf := make([]byte, 2)
 	if _, err = buf.Read(bytesTmpBuf); err != nil {
-		return fmt.Errorf("Не удалось получить адрес модуля ДУЖ: %v", err)
+		return fmt.Errorf("не удалось получить адрес модуля ДУЖ: %v", err)
 	}
 	e.ModuleAddress = binary.LittleEndian.Uint16(bytesTmpBuf)
 
 	bytesTmpBuf = make([]byte, 4)
 	if _, err = buf.Read(bytesTmpBuf); err != nil {
-		return fmt.Errorf("Не удалось получить показания ДУЖ: %v", err)
+		return fmt.Errorf("не удалось получить показания ДУЖ: %v", err)
 	}
 	e.LiquidLevelSensorData = binary.LittleEndian.Uint32(bytesTmpBuf)
 
@@ -68,19 +68,19 @@ func (e *SrLiquidLevelSensor) Encode() ([]byte, error) {
 	flagsBits := "0" + e.LiquidLevelSensorErrorFlag + e.LiquidLevelSensorValueUnit +
 		e.RawDataFlag + fmt.Sprintf("%03b", e.LiquidLevelSensorNumber)
 	if flags, err = strconv.ParseUint(flagsBits, 2, 8); err != nil {
-		return result, fmt.Errorf("Не удалось сгенерировать байт флагов ext_pos_data: %v", err)
+		return result, fmt.Errorf("не удалось сгенерировать байт флагов ext_pos_data: %v", err)
 	}
 
 	if err = buf.WriteByte(uint8(flags)); err != nil {
-		return result, fmt.Errorf("Не удалось записать байт флагов ext_pos_data: %v", err)
+		return result, fmt.Errorf("не удалось записать байт флагов ext_pos_data: %v", err)
 	}
 
 	if err = binary.Write(buf, binary.LittleEndian, e.ModuleAddress); err != nil {
-		return result, fmt.Errorf("Не удалось записать адрес модуля ДУЖ: %v", err)
+		return result, fmt.Errorf("не удалось записать адрес модуля ДУЖ: %v", err)
 	}
 
 	if err = binary.Write(buf, binary.LittleEndian, e.LiquidLevelSensorData); err != nil {
-		return result, fmt.Errorf("Не удалось записать показания ДУЖ: %v", err)
+		return result, fmt.Errorf("не удалось записать показания ДУЖ: %v", err)
 	}
 
 	result = buf.Bytes()
@@ -88,7 +88,7 @@ func (e *SrLiquidLevelSensor) Encode() ([]byte, error) {
 	return result, err
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (e *SrLiquidLevelSensor) Length() uint16 {
 	var result uint16
 

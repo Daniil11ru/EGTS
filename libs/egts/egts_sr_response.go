@@ -6,14 +6,14 @@ import (
 	"fmt"
 )
 
-//SrResponse структура подзаписи типа EGTS_SR_RESPONSE, которая применяется для подтверждения
-//приема результатов обработки поддержки услуг
+// SrResponse структура подзаписи типа EGTS_SR_RESPONSE, которая применяется для подтверждения
+// приема результатов обработки поддержки услуг
 type SrResponse struct {
 	ConfirmedRecordNumber uint16 `json:"CRN"`
 	RecordStatus          uint8  `json:"RST"`
 }
 
-//Decode разбирает байты в структуру подзаписи
+// Decode разбирает байты в структуру подзаписи
 func (s *SrResponse) Decode(content []byte) error {
 	var (
 		err error
@@ -22,12 +22,12 @@ func (s *SrResponse) Decode(content []byte) error {
 
 	tmpIntBuf := make([]byte, 2)
 	if _, err = buf.Read(tmpIntBuf); err != nil {
-		return fmt.Errorf("Не удалось получить номер подтверждаемой записи: %v", err)
+		return fmt.Errorf("не удалось получить номер подтверждаемой записи: %v", err)
 	}
 	s.ConfirmedRecordNumber = binary.LittleEndian.Uint16(tmpIntBuf)
 
 	if s.RecordStatus, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить статус обработки записи: %v", err)
+		return fmt.Errorf("не удалось получить статус обработки записи: %v", err)
 	}
 
 	sfd := ServiceDataSet{}
@@ -37,7 +37,7 @@ func (s *SrResponse) Decode(content []byte) error {
 	return err
 }
 
-//Encode преобразовывает подзапись в набор байт
+// Encode преобразовывает подзапись в набор байт
 func (s *SrResponse) Encode() ([]byte, error) {
 	var (
 		result []byte
@@ -46,18 +46,18 @@ func (s *SrResponse) Encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	if err = binary.Write(buf, binary.LittleEndian, s.ConfirmedRecordNumber); err != nil {
-		return result, fmt.Errorf("Не удалось записать номер подтверждаемой записи: %v", err)
+		return result, fmt.Errorf("не удалось записать номер подтверждаемой записи: %v", err)
 	}
 
 	if err = buf.WriteByte(s.RecordStatus); err != nil {
-		return result, fmt.Errorf("Не удалось записать статус обработки записи: %v", err)
+		return result, fmt.Errorf("не удалось записать статус обработки записи: %v", err)
 	}
 
 	result = buf.Bytes()
 	return result, err
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (s *SrResponse) Length() uint16 {
 	var result uint16
 

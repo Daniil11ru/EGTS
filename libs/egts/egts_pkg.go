@@ -58,16 +58,16 @@ func (p *Package) Decode(content []byte, opt ...func(*Options)) (uint8, error) {
 	)
 	buf := bytes.NewReader(content)
 	if p.ProtocolVersion, err = buf.ReadByte(); err != nil {
-		return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить версию протокола: %v", err)
+		return egtsPcIncHeaderform, fmt.Errorf("не удалось получить версию протокола: %v", err)
 	}
 
 	if p.SecurityKeyID, err = buf.ReadByte(); err != nil {
-		return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить идентификатор ключа: %v", err)
+		return egtsPcIncHeaderform, fmt.Errorf("не удалось получить идентификатор ключа: %v", err)
 	}
 
 	//разбираем флаги
 	if flags, err = buf.ReadByte(); err != nil {
-		return egtsPcIncHeaderform, fmt.Errorf("Не удалось флаги: %v", err)
+		return egtsPcIncHeaderform, fmt.Errorf("не удалось флаги: %v", err)
 	}
 	flagBits := fmt.Sprintf("%08b", flags)
 	p.Prefix = flagBits[:2]         // flags << 7, flags << 6
@@ -79,55 +79,55 @@ func (p *Package) Decode(content []byte, opt ...func(*Options)) (uint8, error) {
 	isEncrypted := p.EncryptionAlg != "00"
 
 	if p.HeaderLength, err = buf.ReadByte(); err != nil {
-		return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить длину заголовка: %v", err)
+		return egtsPcIncHeaderform, fmt.Errorf("не удалось получить длину заголовка: %v", err)
 	}
 
 	if p.HeaderEncoding, err = buf.ReadByte(); err != nil {
-		return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить метод кодирования: %v", err)
+		return egtsPcIncHeaderform, fmt.Errorf("не удалось получить метод кодирования: %v", err)
 	}
 
 	tmpIntBuf := make([]byte, 2)
 	if _, err = buf.Read(tmpIntBuf); err != nil {
-		return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить длину секции данных: %v", err)
+		return egtsPcIncHeaderform, fmt.Errorf("не удалось получить длину секции данных: %v", err)
 	}
 	p.FrameDataLength = binary.LittleEndian.Uint16(tmpIntBuf)
 
 	if _, err = buf.Read(tmpIntBuf); err != nil {
-		return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить идентификатор пакета: %v", err)
+		return egtsPcIncHeaderform, fmt.Errorf("не удалось получить идентификатор пакета: %v", err)
 	}
 	p.PacketIdentifier = binary.LittleEndian.Uint16(tmpIntBuf)
 
 	if p.PacketType, err = buf.ReadByte(); err != nil {
-		return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить тип пакета: %v", err)
+		return egtsPcIncHeaderform, fmt.Errorf("не удалось получить тип пакета: %v", err)
 	}
 
 	if p.Route == "1" {
 		if _, err = buf.Read(tmpIntBuf); err != nil {
-			return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить адрес апк отправителя: %v", err)
+			return egtsPcIncHeaderform, fmt.Errorf("не удалось получить адрес апк отправителя: %v", err)
 		}
 		p.PeerAddress = binary.LittleEndian.Uint16(tmpIntBuf)
 
 		if _, err = buf.Read(tmpIntBuf); err != nil {
-			return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить адрес апк получателя: %v", err)
+			return egtsPcIncHeaderform, fmt.Errorf("не удалось получить адрес апк получателя: %v", err)
 		}
 		p.RecipientAddress = binary.LittleEndian.Uint16(tmpIntBuf)
 
 		if p.TimeToLive, err = buf.ReadByte(); err != nil {
-			return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить TTL пакета: %v", err)
+			return egtsPcIncHeaderform, fmt.Errorf("не удалось получить TTL пакета: %v", err)
 		}
 	}
 
 	if p.HeaderCheckSum, err = buf.ReadByte(); err != nil {
-		return egtsPcIncHeaderform, fmt.Errorf("Не удалось получить crc заголовка: %v", err)
+		return egtsPcIncHeaderform, fmt.Errorf("не удалось получить crc заголовка: %v", err)
 	}
 
 	if p.HeaderCheckSum != crc8(content[:p.HeaderLength-1]) {
-		return egtsPcHeaderCrcError, fmt.Errorf("Не верная сумма заголовка пакета")
+		return egtsPcHeaderCrcError, fmt.Errorf("не верная сумма заголовка пакета")
 	}
 
 	dataFrameBytes := make([]byte, p.FrameDataLength)
 	if _, err = buf.Read(dataFrameBytes); err != nil {
-		return egtsPcIncDataform, fmt.Errorf("Не считать тело пакета: %v", err)
+		return egtsPcIncDataform, fmt.Errorf("не считать тело пакета: %v", err)
 	}
 	switch p.PacketType {
 	case PtAppdataPacket:
@@ -137,7 +137,7 @@ func (p *Package) Decode(content []byte, opt ...func(*Options)) (uint8, error) {
 		p.ServicesFrameData = &PtResponse{}
 		break
 	default:
-		return egtsPcUnsType, fmt.Errorf("Неизвестный тип пакета: %d", p.PacketType)
+		return egtsPcUnsType, fmt.Errorf("неизвестный тип пакета: %d", p.PacketType)
 	}
 
 	if isEncrypted {
@@ -156,12 +156,12 @@ func (p *Package) Decode(content []byte, opt ...func(*Options)) (uint8, error) {
 
 	crcBytes := make([]byte, 2)
 	if _, err = buf.Read(crcBytes); err != nil {
-		return egtsPcDecryptError, fmt.Errorf("Не удалось считать crc16 пакета: %v", err)
+		return egtsPcDecryptError, fmt.Errorf("не удалось считать crc16 пакета: %v", err)
 	}
 	p.ServicesFrameDataCheckSum = binary.LittleEndian.Uint16(crcBytes)
 
 	if p.ServicesFrameDataCheckSum != crc16(content[p.HeaderLength:uint16(p.HeaderLength)+p.FrameDataLength]) {
-		return egtsPcHeaderCrcError, fmt.Errorf("Не верная сумма тела пакета")
+		return egtsPcHeaderCrcError, fmt.Errorf("не верная сумма тела пакета")
 	}
 	return egtsPcOk, err
 }
@@ -184,20 +184,20 @@ func (p *Package) Encode(opt ...func(*Options)) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	if err = buf.WriteByte(p.ProtocolVersion); err != nil {
-		return result, fmt.Errorf("Не удалось записать версию протокола: %v", err)
+		return result, fmt.Errorf("не удалось записать версию протокола: %v", err)
 	}
 	if err = buf.WriteByte(p.SecurityKeyID); err != nil {
-		return result, fmt.Errorf("Не удалось записать  идентификатор ключа: %v", err)
+		return result, fmt.Errorf("не удалось записать  идентификатор ключа: %v", err)
 	}
 
 	//собираем флаги
 	flagsBits := p.Prefix + p.Route + p.EncryptionAlg + p.Compression + p.Priority
 	if flags, err = strconv.ParseUint(flagsBits, 2, 8); err != nil {
-		return result, fmt.Errorf("Не удалось сгенерировать байт флагов: %v", err)
+		return result, fmt.Errorf("не удалось сгенерировать байт флагов: %v", err)
 	}
 
 	if err = buf.WriteByte(uint8(flags)); err != nil {
-		return result, fmt.Errorf("Не удалось записать флаги: %v", err)
+		return result, fmt.Errorf("не удалось записать флаги: %v", err)
 	}
 
 	if p.HeaderLength == 0 {
@@ -208,11 +208,11 @@ func (p *Package) Encode(opt ...func(*Options)) ([]byte, error) {
 	}
 
 	if err = buf.WriteByte(p.HeaderLength); err != nil {
-		return result, fmt.Errorf("Не удалось записать длину заголовка: %v", err)
+		return result, fmt.Errorf("не удалось записать длину заголовка: %v", err)
 	}
 
 	if err = buf.WriteByte(p.HeaderEncoding); err != nil {
-		return result, fmt.Errorf("Не удалось записать метод кодирования: %v", err)
+		return result, fmt.Errorf("не удалось записать метод кодирования: %v", err)
 	}
 
 	var sfrd []byte
@@ -234,28 +234,28 @@ func (p *Package) Encode(opt ...func(*Options)) ([]byte, error) {
 	}
 	p.FrameDataLength = uint16(len(sfrd))
 	if err = binary.Write(buf, binary.LittleEndian, p.FrameDataLength); err != nil {
-		return result, fmt.Errorf("Не удалось записать длину секции данных: %v", err)
+		return result, fmt.Errorf("не удалось записать длину секции данных: %v", err)
 	}
 
 	if err = binary.Write(buf, binary.LittleEndian, p.PacketIdentifier); err != nil {
-		return result, fmt.Errorf("Не удалось записать идентификатор пакета: %v", err)
+		return result, fmt.Errorf("не удалось записать идентификатор пакета: %v", err)
 	}
 
 	if err = buf.WriteByte(p.PacketType); err != nil {
-		return result, fmt.Errorf("Не удалось записать идентификатор пакета: %v", err)
+		return result, fmt.Errorf("не удалось записать идентификатор пакета: %v", err)
 	}
 
 	if p.Route == "1" {
 		if err = binary.Write(buf, binary.LittleEndian, p.PeerAddress); err != nil {
-			return result, fmt.Errorf("Не удалось записать адрес апк отправителя: %v", err)
+			return result, fmt.Errorf("не удалось записать адрес апк отправителя: %v", err)
 		}
 
 		if err = binary.Write(buf, binary.LittleEndian, p.RecipientAddress); err != nil {
-			return result, fmt.Errorf("Не удалось записать адрес апк получателя: %v", err)
+			return result, fmt.Errorf("не удалось записать адрес апк получателя: %v", err)
 		}
 
 		if err = buf.WriteByte(p.TimeToLive); err != nil {
-			return result, fmt.Errorf("Не удалось записать TTL пакета: %v", err)
+			return result, fmt.Errorf("не удалось записать TTL пакета: %v", err)
 		}
 	}
 
@@ -264,7 +264,7 @@ func (p *Package) Encode(opt ...func(*Options)) ([]byte, error) {
 	if p.FrameDataLength > 0 {
 		buf.Write(sfrd)
 		if err := binary.Write(buf, binary.LittleEndian, crc16(sfrd)); err != nil {
-			return result, fmt.Errorf("Не удалось записать crc16 пакета: %v", err)
+			return result, fmt.Errorf("не удалось записать crc16 пакета: %v", err)
 		}
 	}
 

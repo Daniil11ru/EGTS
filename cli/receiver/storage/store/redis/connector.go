@@ -15,8 +15,9 @@ db = 0
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"strconv"
+
+	"github.com/go-redis/redis/v8"
 )
 
 type Connector struct {
@@ -39,7 +40,7 @@ func (c *Connector) Init(cfg map[string]string) error {
 		return fmt.Errorf("не задан адрес redis сервера")
 	}
 
-	configDb, _ := c.config["db"]
+	configDb := c.config["db"]
 	if !ok {
 		configDb = "0"
 	}
@@ -64,16 +65,16 @@ func (c *Connector) Init(cfg map[string]string) error {
 
 func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 	if msg == nil {
-		return fmt.Errorf("Не корректная ссылка на пакет")
+		return fmt.Errorf("не корректная ссылка на пакет")
 	}
 
 	innerPkg, err := msg.ToBytes()
 	if err != nil {
-		return fmt.Errorf("Ошибка сериализации  пакета: %v", err)
+		return fmt.Errorf("ошибка сериализации  пакета: %v", err)
 	}
 
 	if err := c.conn.Publish(context.Background(), c.queue, innerPkg).Err(); err != nil {
-		return fmt.Errorf("Ошибка отправки  пакета в redis: %v", err)
+		return fmt.Errorf("ошибка отправки  пакета в redis: %v", err)
 	}
 
 	return nil

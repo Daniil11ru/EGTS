@@ -7,8 +7,8 @@ import (
 	"strconv"
 )
 
-//SrTermIdentity структура подзаписи типа EGTS_SR_TERM_IDENTITY, которая используется АС при запросе
-//авторизации на телематическую платформу и содержит учетные данные АС.
+// SrTermIdentity структура подзаписи типа EGTS_SR_TERM_IDENTITY, которая используется АС при запросе
+// авторизации на телематическую платформу и содержит учетные данные АС.
 type SrTermIdentity struct {
 	TerminalIdentifier       uint32 `json:"TID"`
 	MNE                      string `json:"MNE"`
@@ -28,7 +28,7 @@ type SrTermIdentity struct {
 	MobileNumber             string `json:"MSISDN"`
 }
 
-//Decode разбирает байты в структуру подзаписи
+// Decode разбирает байты в структуру подзаписи
 func (e *SrTermIdentity) Decode(content []byte) error {
 	var (
 		err   error
@@ -38,12 +38,12 @@ func (e *SrTermIdentity) Decode(content []byte) error {
 
 	tmpBuf := make([]byte, 4)
 	if _, err = buf.Read(tmpBuf); err != nil {
-		return fmt.Errorf("Не удалось получить идентификатор терминал при авторизации")
+		return fmt.Errorf("не удалось получить идентификатор терминал при авторизации")
 	}
 	e.TerminalIdentifier = binary.LittleEndian.Uint32(tmpBuf)
 
 	if flags, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось считать байт флагов term identify: %v", err)
+		return fmt.Errorf("не удалось считать байт флагов term identify: %v", err)
 	}
 	flagBits := fmt.Sprintf("%08b", flags)
 	e.MNE = flagBits[:1]
@@ -58,7 +58,7 @@ func (e *SrTermIdentity) Decode(content []byte) error {
 	if e.HDIDE == "1" {
 		tmpBuf = make([]byte, 2)
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить идентификатор «домашней» телематической платформы при авторизации")
+			return fmt.Errorf("не удалось получить идентификатор «домашней» телематической платформы при авторизации")
 		}
 		e.HomeDispatcherIdentifier = binary.LittleEndian.Uint16(tmpBuf)
 
@@ -67,7 +67,7 @@ func (e *SrTermIdentity) Decode(content []byte) error {
 	if e.IMEIE == "1" {
 		tmpBuf = make([]byte, 15)
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить IMEI при авторизации")
+			return fmt.Errorf("не удалось получить IMEI при авторизации")
 		}
 		e.IMEI = string(tmpBuf)
 	}
@@ -75,7 +75,7 @@ func (e *SrTermIdentity) Decode(content []byte) error {
 	if e.IMSIE == "1" {
 		tmpBuf = make([]byte, 16)
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить IMSI при авторизации")
+			return fmt.Errorf("не удалось получить IMSI при авторизации")
 		}
 		e.IMSI = string(tmpBuf)
 	}
@@ -83,7 +83,7 @@ func (e *SrTermIdentity) Decode(content []byte) error {
 	if e.LNGCE == "1" {
 		tmpBuf = make([]byte, 3)
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить код языка при авторизации")
+			return fmt.Errorf("не удалось получить код языка при авторизации")
 		}
 		e.LanguageCode = string(tmpBuf)
 	}
@@ -91,14 +91,14 @@ func (e *SrTermIdentity) Decode(content []byte) error {
 	if e.NIDE == "1" {
 		e.NetworkIdentifier = make([]byte, 3)
 		if _, err = buf.Read(e.NetworkIdentifier); err != nil {
-			return fmt.Errorf("Не удалось получить код идентификатор сети оператора при авторизации")
+			return fmt.Errorf("не удалось получить код идентификатор сети оператора при авторизации")
 		}
 	}
 
 	if e.BSE == "1" {
 		tmpBuf = make([]byte, 2)
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить максимальный размер буфера при авторизации")
+			return fmt.Errorf("не удалось получить максимальный размер буфера при авторизации")
 		}
 		e.BufferSize = binary.LittleEndian.Uint16(tmpBuf)
 	}
@@ -106,7 +106,7 @@ func (e *SrTermIdentity) Decode(content []byte) error {
 	if e.MNE == "1" {
 		tmpBuf = make([]byte, 15)
 		if _, err = buf.Read(tmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить телефонный номер мобильного абонента")
+			return fmt.Errorf("не удалось получить телефонный номер мобильного абонента")
 		}
 		e.MobileNumber = string(tmpBuf)
 	}
@@ -114,7 +114,7 @@ func (e *SrTermIdentity) Decode(content []byte) error {
 	return err
 }
 
-//Encode преобразовывает подзапись в набор байт
+// Encode преобразовывает подзапись в набор байт
 func (e *SrTermIdentity) Encode() ([]byte, error) {
 	var (
 		result []byte
@@ -124,53 +124,53 @@ func (e *SrTermIdentity) Encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	if err = binary.Write(buf, binary.LittleEndian, e.TerminalIdentifier); err != nil {
-		return result, fmt.Errorf("Не удалось записать идентификатор терминал при авторизации")
+		return result, fmt.Errorf("не удалось записать идентификатор терминал при авторизации")
 	}
 
-	flags, err = strconv.ParseUint(e.MNE+e.BSE+e.NIDE+e.SSRA+e.LNGCE+e.IMSIE+e.IMEIE+e.HDIDE, 2, 8)
+	flags, _ = strconv.ParseUint(e.MNE+e.BSE+e.NIDE+e.SSRA+e.LNGCE+e.IMSIE+e.IMEIE+e.HDIDE, 2, 8)
 	if err = buf.WriteByte(uint8(flags)); err != nil {
-		return result, fmt.Errorf("Не удалось записать байт флагов term identify: %v", err)
+		return result, fmt.Errorf("не удалось записать байт флагов term identify: %v", err)
 	}
 
 	if e.HDIDE == "1" {
 		if err = binary.Write(buf, binary.LittleEndian, e.HomeDispatcherIdentifier); err != nil {
-			return result, fmt.Errorf("Не удалось записать идентификатор «домашней» телематической платформы при авторизации")
+			return result, fmt.Errorf("не удалось записать идентификатор «домашней» телематической платформы при авторизации")
 		}
 	}
 
 	if e.IMEIE == "1" {
 		if _, err = buf.Write([]byte(e.IMEI)); err != nil {
-			return result, fmt.Errorf("Не удалось записать IMEI при авторизации")
+			return result, fmt.Errorf("не удалось записать IMEI при авторизации")
 		}
 	}
 
 	if e.IMSIE == "1" {
 		if _, err = buf.Write([]byte(e.IMSI)); err != nil {
-			return result, fmt.Errorf("Не удалось записать IMSI при авторизации")
+			return result, fmt.Errorf("не удалось записать IMSI при авторизации")
 		}
 	}
 
 	if e.LNGCE == "1" {
 		if _, err = buf.Write([]byte(e.LanguageCode)); err != nil {
-			return result, fmt.Errorf("Не удалось записать IMSI при авторизации")
+			return result, fmt.Errorf("не удалось записать IMSI при авторизации")
 		}
 	}
 
 	if e.NIDE == "1" {
 		if _, err = buf.Write(e.NetworkIdentifier); err != nil {
-			return result, fmt.Errorf("Не удалось записать код идентификатор сети оператора при авторизации")
+			return result, fmt.Errorf("не удалось записать код идентификатор сети оператора при авторизации")
 		}
 	}
 
 	if e.BSE == "1" {
 		if err = binary.Write(buf, binary.LittleEndian, e.BufferSize); err != nil {
-			return result, fmt.Errorf("Не удалось записать максимальный размер буфера при авторизации")
+			return result, fmt.Errorf("не удалось записать максимальный размер буфера при авторизации")
 		}
 	}
 
 	if e.MNE == "1" {
 		if _, err = buf.Write([]byte(e.MobileNumber)); err != nil {
-			return result, fmt.Errorf("Не удалось записать телефонный номер мобильного абонента")
+			return result, fmt.Errorf("не удалось записать телефонный номер мобильного абонента")
 		}
 	}
 
@@ -178,7 +178,7 @@ func (e *SrTermIdentity) Encode() ([]byte, error) {
 	return result, err
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (e *SrTermIdentity) Length() uint16 {
 	var result uint16
 

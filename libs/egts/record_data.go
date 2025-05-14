@@ -27,12 +27,12 @@ func (rds *RecordDataSet) Decode(recDS []byte) error {
 	for buf.Len() > 0 {
 		rd := RecordData{}
 		if rd.SubrecordType, err = buf.ReadByte(); err != nil {
-			return fmt.Errorf("Не удалось получить тип записи subrecord data: %v", err)
+			return fmt.Errorf("не удалось получить тип записи subrecord data: %v", err)
 		}
 
 		tmpIntBuf := make([]byte, 2)
 		if _, err = buf.Read(tmpIntBuf); err != nil {
-			return fmt.Errorf("Не удалось получить длину записи subrecord data: %v", err)
+			return fmt.Errorf("не удалось получить длину записи subrecord data: %v", err)
 		}
 		rd.SubrecordLength = binary.LittleEndian.Uint16(tmpIntBuf)
 
@@ -59,7 +59,7 @@ func (rds *RecordDataSet) Decode(recDS []byte) error {
 				rd.SubrecordData = &SrStateData{}
 			} else {
 				// TODO: добавить секцию EGTS_SR_ACCEL_DATA
-				return fmt.Errorf("Не реализованная секция EGTS_SR_ACCEL_DATA: %d. Длина: %d. Содержимое: %X", rd.SubrecordType, rd.SubrecordLength, subRecordBytes)
+				return fmt.Errorf("не реализованная секция EGTS_SR_ACCEL_DATA: %d. Длина: %d. Содержимое: %X", rd.SubrecordType, rd.SubrecordLength, subRecordBytes)
 			}
 		case SrStateDataType:
 			rd.SubrecordData = &SrStateData{}
@@ -80,7 +80,7 @@ func (rds *RecordDataSet) Decode(recDS []byte) error {
 		case SrPassengersCountersType:
 			rd.SubrecordData = &SrPassengersCountersData{}
 		default:
-			log.Infof("Не известный тип подзаписи: %d. Длина: %d. Содержимое: %X", rd.SubrecordType, rd.SubrecordLength, subRecordBytes)
+			log.Infof("не известный тип подзаписи: %d. Длина: %d. Содержимое: %X", rd.SubrecordType, rd.SubrecordLength, subRecordBytes)
 			continue
 		}
 

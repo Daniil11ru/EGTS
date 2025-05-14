@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-//PtResponse структура подзаписи типа EGTS_PT_RESPONSE
+// PtResponse структура подзаписи типа EGTS_PT_RESPONSE
 type PtResponse struct {
 	ResponsePacketID uint16     `json:"RPID"`
 	ProcessingResult uint8      `json:"PR"`
@@ -22,12 +22,12 @@ func (s *PtResponse) Decode(content []byte) error {
 
 	tmpIntBuf := make([]byte, 2)
 	if _, err = buf.Read(tmpIntBuf); err != nil {
-		return fmt.Errorf("Не удалось получить идентификатор пакета из ответа: %v", err)
+		return fmt.Errorf("не удалось получить идентификатор пакета из ответа: %v", err)
 	}
 	s.ResponsePacketID = binary.LittleEndian.Uint16(tmpIntBuf)
 
 	if s.ProcessingResult, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить код обработки: %v", err)
+		return fmt.Errorf("не удалось получить код обработки: %v", err)
 	}
 
 	// если имеется о сервисном уровне, так как она необязательна
@@ -51,11 +51,11 @@ func (s *PtResponse) Encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	if err = binary.Write(buf, binary.LittleEndian, s.ResponsePacketID); err != nil {
-		return result, fmt.Errorf("Не удалось записать индентификатор пакета в ответ: %v", err)
+		return result, fmt.Errorf("не удалось записать индентификатор пакета в ответ: %v", err)
 	}
 
 	if err = buf.WriteByte(s.ProcessingResult); err != nil {
-		return result, fmt.Errorf("Не удалось записать результат обработки в пакет: %v", err)
+		return result, fmt.Errorf("не удалось записать результат обработки в пакет: %v", err)
 	}
 
 	if s.SDR != nil {
@@ -69,7 +69,7 @@ func (s *PtResponse) Encode() ([]byte, error) {
 	return result, err
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (s *PtResponse) Length() uint16 {
 	var result uint16
 

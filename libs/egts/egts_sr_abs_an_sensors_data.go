@@ -5,24 +5,24 @@ import (
 	"errors"
 )
 
-//SrAbsAnSensData структура подзаписи типа EGTS_SR_ABS_AN_SENS_DATA, которая применяется абонентским
-//терминалом для передачи данных о состоянии одного аналогового входа
+// SrAbsAnSensData структура подзаписи типа EGTS_SR_ABS_AN_SENS_DATA, которая применяется абонентским
+// терминалом для передачи данных о состоянии одного аналогового входа
 type SrAbsAnSensData struct {
 	SensorNumber uint8  `json:"SensorNumber"`
 	Value        uint32 `json:"Value"`
 }
 
-//Decode разбирает байты в структуру подзаписи
+// Decode разбирает байты в структуру подзаписи
 func (e *SrAbsAnSensData) Decode(content []byte) error {
 	if len(content) < int(e.Length()) {
-		return errors.New("Некорректный размер данных")
+		return errors.New("некорректный размер данных")
 	}
 	e.SensorNumber = uint8(content[0])
 	e.Value = uint32(binary.LittleEndian.Uint32(content) >> 8)
 	return nil
 }
 
-//Encode преобразовывает подзапись в набор байт
+// Encode преобразовывает подзапись в набор байт
 func (e *SrAbsAnSensData) Encode() ([]byte, error) {
 	return []byte{
 		byte(e.SensorNumber),
@@ -32,7 +32,7 @@ func (e *SrAbsAnSensData) Encode() ([]byte, error) {
 	}, nil
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (e *SrAbsAnSensData) Length() uint16 {
 	return 4
 }

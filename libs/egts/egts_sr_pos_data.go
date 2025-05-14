@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-//SrPosData структура подзаписи типа EGTS_SR_POS_DATA, которая используется абонентским
-//терминалом при передаче основных данных определения местоположения
+// SrPosData структура подзаписи типа EGTS_SR_POS_DATA, которая используется абонентским
+// терминалом при передаче основных данных определения местоположения
 type SrPosData struct {
 	NavigationTime      time.Time `json:"NTM"`
 	Latitude            float64   `json:"LAT"`
@@ -33,7 +33,7 @@ type SrPosData struct {
 	SourceData          int16     `json:"SRCD"`
 }
 
-//Decode разбирает байты в структуру подзаписи
+// Decode разбирает байты в структуру подзаписи
 func (e *SrPosData) Decode(content []byte) error {
 	var (
 		err   error
@@ -46,14 +46,14 @@ func (e *SrPosData) Decode(content []byte) error {
 	startDate := time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
 	tmpUint32Buf := make([]byte, 4)
 	if _, err = buf.Read(tmpUint32Buf); err != nil {
-		return fmt.Errorf("Не удалось получить время навигации: %v", err)
+		return fmt.Errorf("не удалось получить время навигации: %v", err)
 	}
 	preFieldVal := binary.LittleEndian.Uint32(tmpUint32Buf)
 	e.NavigationTime = startDate.Add(time.Duration(preFieldVal) * time.Second)
 
 	// В протоколе значение хранится в виде: широта по модулю, градусы/90*0xFFFFFFFF  и взята целая часть
 	if _, err = buf.Read(tmpUint32Buf); err != nil {
-		return fmt.Errorf("Не удалось получить широту: %v", err)
+		return fmt.Errorf("не удалось получить широту: %v", err)
 	}
 
 	preFieldVal = binary.LittleEndian.Uint32(tmpUint32Buf)
@@ -61,14 +61,14 @@ func (e *SrPosData) Decode(content []byte) error {
 
 	// В протоколе значение хранится в виде: долгота по модулю, градусы/180*0xFFFFFFFF  и взята целая часть
 	if _, err = buf.Read(tmpUint32Buf); err != nil {
-		return fmt.Errorf("Не удалось получить время долгату: %v", err)
+		return fmt.Errorf("не удалось получить время долгату: %v", err)
 	}
 	preFieldVal = binary.LittleEndian.Uint32(tmpUint32Buf)
 	e.Longitude = float64(float64(preFieldVal) * 180 / 0xFFFFFFFF)
 
 	//байт флагов
 	if flags, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить байт флагов pos_data: %v", err)
+		return fmt.Errorf("не удалось получить байт флагов pos_data: %v", err)
 	}
 	flagBits := fmt.Sprintf("%08b", flags)
 	e.ALTE = flagBits[:1]
@@ -83,7 +83,7 @@ func (e *SrPosData) Decode(content []byte) error {
 	// скорость
 	tmpUint16Buf := make([]byte, 2)
 	if _, err = buf.Read(tmpUint16Buf); err != nil {
-		return fmt.Errorf("Не удалось получить скорость: %v", err)
+		return fmt.Errorf("не удалось получить скорость: %v", err)
 	}
 	spd := binary.LittleEndian.Uint16(tmpUint16Buf)
 	e.DirectionHighestBit = uint8(spd >> 15 & 0x1)
@@ -91,36 +91,36 @@ func (e *SrPosData) Decode(content []byte) error {
 
 	speedBits := fmt.Sprintf("%016b", spd)
 	if speed, err = strconv.ParseUint(speedBits[2:], 2, 16); err != nil {
-		return fmt.Errorf("Не удалось расшифровать скорость из битов: %v", err)
+		return fmt.Errorf("не удалось расшифровать скорость из битов: %v", err)
 	}
 
 	// т.к. скорость с дискретностью 0,1 км
 	e.Speed = uint16(speed) / 10
 
 	if e.Direction, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить направление движения: %v", err)
+		return fmt.Errorf("не удалось получить направление движения: %v", err)
 	}
 	e.Direction |= e.DirectionHighestBit << 7
 
 	bytesTmpBuf := make([]byte, 3)
 	if _, err = buf.Read(bytesTmpBuf); err != nil {
-		return fmt.Errorf("Не удалось получить пройденное расстояние (пробег) в км: %v", err)
+		return fmt.Errorf("не удалось получить пройденное расстояние (пробег) в км: %v", err)
 	}
 	bytesTmpBuf = append(bytesTmpBuf, 0x00)
 	e.Odometer = binary.LittleEndian.Uint32(bytesTmpBuf)
 
 	if e.DigitalInputs, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить битовые флаги, определяют состояние основных дискретных входов: %v", err)
+		return fmt.Errorf("не удалось получить битовые флаги, определяют состояние основных дискретных входов: %v", err)
 	}
 
 	if e.Source, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить источник (событие), инициировавший посылку: %v", err)
+		return fmt.Errorf("не удалось получить источник (событие), инициировавший посылку: %v", err)
 	}
 
 	if e.ALTE == "1" {
 		bytesTmpBuf = []byte{0, 0, 0, 0}
 		if _, err = buf.Read(bytesTmpBuf); err != nil {
-			return fmt.Errorf("Не удалось получить высоту над уровнем моря: %v", err)
+			return fmt.Errorf("не удалось получить высоту над уровнем моря: %v", err)
 		}
 		e.Altitude = binary.LittleEndian.Uint32(bytesTmpBuf)
 	}
@@ -129,7 +129,7 @@ func (e *SrPosData) Decode(content []byte) error {
 	return err
 }
 
-//Encode преобразовывает подзапись в набор байт
+// Encode преобразовывает подзапись в набор байт
 func (e *SrPosData) Encode() ([]byte, error) {
 	var (
 		err    error
@@ -141,27 +141,27 @@ func (e *SrPosData) Encode() ([]byte, error) {
 	// Преобразуем время навигации к формату, который требует стандарт: количество секунд с 00:00:00 01.01.2010 UTC
 	startDate := time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
 	if err = binary.Write(buf, binary.LittleEndian, uint32(e.NavigationTime.Sub(startDate).Seconds())); err != nil {
-		return result, fmt.Errorf("Не удалось записать время навигации: %v", err)
+		return result, fmt.Errorf("не удалось записать время навигации: %v", err)
 	}
 
 	// В протоколе значение хранится в виде: широта по модулю, градусы/90*0xFFFFFFFF  и взята целая часть
 	if err = binary.Write(buf, binary.LittleEndian, uint32(e.Latitude/90*0xFFFFFFFF)); err != nil {
-		return result, fmt.Errorf("Не удалось записать широту: %v", err)
+		return result, fmt.Errorf("не удалось записать широту: %v", err)
 	}
 
 	// В протоколе значение хранится в виде: долгота по модулю, градусы/180*0xFFFFFFFF  и взята целая часть
 	if err = binary.Write(buf, binary.LittleEndian, uint32(e.Longitude/180*0xFFFFFFFF)); err != nil {
-		return result, fmt.Errorf("Не удалось записать долготу: %v", err)
+		return result, fmt.Errorf("не удалось записать долготу: %v", err)
 	}
 
 	//байт флагов
 	flags, err = strconv.ParseUint(e.ALTE+e.LOHS+e.LAHS+e.MV+e.BB+e.CS+e.FIX+e.VLD, 2, 8)
 	if err != nil {
-		return result, fmt.Errorf("Не удалось сгенерировать байт флагов pos_data: %v", err)
+		return result, fmt.Errorf("не удалось сгенерировать байт флагов pos_data: %v", err)
 	}
 
 	if err = buf.WriteByte(uint8(flags)); err != nil {
-		return result, fmt.Errorf("Не удалось записать флаги: %v", err)
+		return result, fmt.Errorf("не удалось записать флаги: %v", err)
 	}
 
 	// скорость
@@ -170,33 +170,33 @@ func (e *SrPosData) Encode() ([]byte, error) {
 	spd := make([]byte, 2)
 	binary.LittleEndian.PutUint16(spd, speed)
 	if _, err = buf.Write(spd); err != nil {
-		return result, fmt.Errorf("Не удалось записать скорость: %v", err)
+		return result, fmt.Errorf("не удалось записать скорость: %v", err)
 	}
 
 	dir := e.Direction &^ (e.DirectionHighestBit << 7)
 	if err = binary.Write(buf, binary.LittleEndian, dir); err != nil {
-		return result, fmt.Errorf("Не удалось записать направление движения: %v", err)
+		return result, fmt.Errorf("не удалось записать направление движения: %v", err)
 	}
 
 	bytesTmpBuf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bytesTmpBuf, e.Odometer)
 	if _, err = buf.Write(bytesTmpBuf[:3]); err != nil {
-		return result, fmt.Errorf("Не удалось запсиать пройденное расстояние (пробег) в км: %v", err)
+		return result, fmt.Errorf("не удалось запсиать пройденное расстояние (пробег) в км: %v", err)
 	}
 
 	if err = binary.Write(buf, binary.LittleEndian, e.DigitalInputs); err != nil {
-		return result, fmt.Errorf("Не удалось записать битовые флаги, определяют состояние основных дискретных входов: %v", err)
+		return result, fmt.Errorf("не удалось записать битовые флаги, определяют состояние основных дискретных входов: %v", err)
 	}
 
 	if err = binary.Write(buf, binary.LittleEndian, e.Source); err != nil {
-		return result, fmt.Errorf("Не удалось записать источник (событие), инициировавший посылку: %v", err)
+		return result, fmt.Errorf("не удалось записать источник (событие), инициировавший посылку: %v", err)
 	}
 
 	if e.ALTE == "1" {
 		bytesTmpBuf = []byte{0, 0, 0, 0}
 		binary.LittleEndian.PutUint32(bytesTmpBuf, e.Altitude)
 		if _, err = buf.Write(bytesTmpBuf[:3]); err != nil {
-			return result, fmt.Errorf("Не удалось записать высоту над уровнем моря: %v", err)
+			return result, fmt.Errorf("не удалось записать высоту над уровнем моря: %v", err)
 		}
 	}
 
@@ -205,7 +205,7 @@ func (e *SrPosData) Encode() ([]byte, error) {
 	return result, nil
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (e *SrPosData) Length() uint16 {
 	var result uint16
 

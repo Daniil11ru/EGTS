@@ -5,13 +5,13 @@ import (
 	"fmt"
 )
 
-//SrResultCode структура подзаписи типа EGTS_SR_RESULT_CODE, которая применяется телематической
-//платформой для информирования АС о результатах процедуры аутентификации АС.
+// SrResultCode структура подзаписи типа EGTS_SR_RESULT_CODE, которая применяется телематической
+// платформой для информирования АС о результатах процедуры аутентификации АС.
 type SrResultCode struct {
 	ResultCode uint8 `json:"RCD"`
 }
 
-//Decode разбирает байты в структуру подзаписи
+// Decode разбирает байты в структуру подзаписи
 func (s *SrResultCode) Decode(content []byte) error {
 	var (
 		err error
@@ -19,13 +19,13 @@ func (s *SrResultCode) Decode(content []byte) error {
 	buf := bytes.NewBuffer(content)
 
 	if s.ResultCode, err = buf.ReadByte(); err != nil {
-		return fmt.Errorf("Не удалось получить код результата: %v", err)
+		return fmt.Errorf("не удалось получить код результата: %v", err)
 	}
 
 	return err
 }
 
-//Encode преобразовывает подзапись в набор байт
+// Encode преобразовывает подзапись в набор байт
 func (s *SrResultCode) Encode() ([]byte, error) {
 	var (
 		result []byte
@@ -34,14 +34,14 @@ func (s *SrResultCode) Encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	if err = buf.WriteByte(s.ResultCode); err != nil {
-		return result, fmt.Errorf("Не удалось записать код результата: %v", err)
+		return result, fmt.Errorf("не удалось записать код результата: %v", err)
 	}
 
 	result = buf.Bytes()
 	return result, err
 }
 
-//Length получает длинну закодированной подзаписи
+// Length получает длинну закодированной подзаписи
 func (s *SrResultCode) Length() uint16 {
 	var result uint16
 
