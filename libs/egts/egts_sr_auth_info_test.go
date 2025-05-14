@@ -1,8 +1,10 @@
 package egts
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -37,7 +39,7 @@ var (
 				TimeFieldExists:          "1",
 				EventIDFieldExists:       "0",
 				ObjectIDFieldExists:      "0",
-				Time:                     286365764,
+				Time:                     time.Unix(286365764, 0),
 				SourceServiceType:        AuthService,
 				RecipientServiceType:     AuthService,
 				RecordDataSet: RecordDataSet{

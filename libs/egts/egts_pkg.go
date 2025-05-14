@@ -272,7 +272,7 @@ func (p *Package) Encode(opt ...func(*Options)) ([]byte, error) {
 	return result, err
 }
 
-//ToBytes переводит пакет в json
+// ToBytes переводит пакет в json
 func (p *Package) ToBytes() ([]byte, error) {
 	return json.Marshal(p)
 }
