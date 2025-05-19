@@ -39,7 +39,7 @@ func main() {
 		defer store.Close()
 	}
 
-	srv := server.New(cfg.GetListenAddress(), cfg.GetEmptyConnTTL(), storages)
+	srv := server.NewCustom(cfg.GetListenAddress(), cfg.GetEmptyConnTTL(), storages)
 
 	srv.Run()
 }

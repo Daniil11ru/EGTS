@@ -99,9 +99,9 @@ func (s *Server) handleConn(conn net.Conn) {
 			return
 		}
 
-		// если пакет не егтс формата закрываем соединение
+		// Закрываем соединение, если пакет не формата EGTS
 		if headerBuf[0] != 0x01 {
-			log.WithField("ip", conn.RemoteAddr()).Warn("Пакет не соответствует формату ЕГТС. Закрыто соединение")
+			log.WithField("ip", conn.RemoteAddr()).Warn("Пакет не соответствует формату EGTS")
 			_ = conn.SetDeadline(time.Time{})
 			return
 		}
@@ -175,7 +175,7 @@ func (s *Server) handleConn(conn net.Conn) {
 				serviceType = rec.SourceServiceType
 				log.Info("Тип сервиса ", serviceType)
 
-				// если в секции с данными есть oid то обновляем его
+				// если в секции с данными есть oid, то обновляем его
 				if rec.ObjectIDFieldExists == "1" {
 					client = rec.ObjectIdentifier
 				}

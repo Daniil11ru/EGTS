@@ -222,5 +222,5 @@ func main() {
 	}
 
 	fmt.Println("Packet sent and processed correct")
-	os.Exit(1)
+	os.Exit(0)
 }
