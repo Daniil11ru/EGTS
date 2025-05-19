@@ -1,6 +1,6 @@
 host: "127.0.0.1"
 port: "6000"
-con_live_sec: 10
+conn_ttl: 5
 log_level: "DEBUG"
 
 storage:

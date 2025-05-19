@@ -5,9 +5,10 @@ package config
 */
 
 import (
-	log "github.com/sirupsen/logrus"
 	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"gopkg.in/yaml.v2"
 )
@@ -33,16 +34,12 @@ func (s *Settings) GetLogLevel() log.Level {
 	switch s.LogLevel {
 	case "DEBUG":
 		lvl = log.DebugLevel
-		break
 	case "INFO":
 		lvl = log.InfoLevel
-		break
 	case "WARN":
 		lvl = log.WarnLevel
-		break
 	case "ERROR":
 		lvl = log.ErrorLevel
-		break
 	default:
 		lvl = log.InfoLevel
 	}

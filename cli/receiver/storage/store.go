@@ -11,21 +11,21 @@ import (
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/tarantool_queue"
 )
 
-var InvalidStorage = errors.New("storage not found")
-var UnknownStorage = errors.New("storage isn't support yet")
+var ErrInvalidStorage = errors.New("storage not found")
+var ErrUnknownStorage = errors.New("storage isn't support yet")
 
 type Store interface {
 	Connector
 	Saver
 }
 
-//Saver интерфейс для подключения внешних хранилищ
+// Saver интерфейс для подключения внешних хранилищ
 type Saver interface {
 	// Save сохранение в хранилище
 	Save(interface{ ToBytes() ([]byte, error) }) error
 }
 
-//Connector интерфейс для подключения внешних хранилищ
+// Connector интерфейс для подключения внешних хранилищ
 type Connector interface {
 	// Init установка соединения с хранилищем
 	Init(map[string]string) error
@@ -34,17 +34,17 @@ type Connector interface {
 	Close() error
 }
 
-//Repository набор выходных хранилищ
+// Repository набор выходных хранилищ
 type Repository struct {
 	storages []Saver
 }
 
-//AddStore добавляет хранилище для сохранения данных
+// AddStore добавляет хранилище для сохранения данных
 func (r *Repository) AddStore(s Saver) {
 	r.storages = append(r.storages, s)
 }
 
-//Save сохраняет данные во все установленные хранилища
+// Save сохраняет данные во все установленные хранилища
 func (r *Repository) Save(m interface{ ToBytes() ([]byte, error) }) error {
 	for _, store := range r.storages {
 		if err := store.Save(m); err != nil {
@@ -54,10 +54,10 @@ func (r *Repository) Save(m interface{ ToBytes() ([]byte, error) }) error {
 	return nil
 }
 
-//LoadStorages загружает хранилища из структуры конфига
+// LoadStorages загружает хранилища из структуры конфига
 func (r *Repository) LoadStorages(storages map[string]map[string]string) error {
 	if len(storages) == 0 {
-		return InvalidStorage
+		return ErrInvalidStorage
 	}
 
 	var db Store
@@ -76,7 +76,7 @@ func (r *Repository) LoadStorages(storages map[string]map[string]string) error {
 		case "mysql":
 			db = &mysql.Connector{}
 		default:
-			return UnknownStorage
+			return ErrUnknownStorage
 		}
 
 		if err := db.Init(params); err != nil {
@@ -88,7 +88,7 @@ func (r *Repository) LoadStorages(storages map[string]map[string]string) error {
 	return nil
 }
 
-//NewRepository создает пустой репозиторий
+// NewRepository создает пустой репозиторий
 func NewRepository() *Repository {
 	return &Repository{}
 }

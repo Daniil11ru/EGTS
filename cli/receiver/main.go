@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/config"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/server"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage"

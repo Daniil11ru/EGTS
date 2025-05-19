@@ -2,12 +2,13 @@ package server
 
 import (
 	"encoding/binary"
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage"
-	"github.com/kuznetsovin/egts-protocol/libs/egts"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"time"
+
+	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage"
+	"github.com/kuznetsovin/egts-protocol/libs/egts"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -31,7 +32,7 @@ func (s *Server) Run() {
 	}
 	defer s.l.Close()
 
-	log.Infof("Запущен сервер %s...", s.addr)
+	log.Infof("Запущен сервер %s", s.addr)
 	for {
 		conn, err := s.l.Accept()
 		if err != nil {
@@ -63,10 +64,12 @@ func (s *Server) handleConn(conn net.Conn) {
 	)
 
 	if s.store == nil {
-		log.Error("Не корректная ссылка на объект хранилища")
+		log.Error("Некорректная ссылка на объект хранилища")
 		return
 	}
 	log.WithField("ip", conn.RemoteAddr()).Info("Установлено соединение")
+
+	log.Debug("TTL: ", s.ttl)
 
 	for {
 	Received:
@@ -75,45 +78,62 @@ func (s *Server) handleConn(conn net.Conn) {
 		srResultCodePkg = nil
 		recvPacket = nil
 
-		connTimer := time.NewTimer(s.ttl)
+		if s.ttl > 0 {
+			_ = conn.SetReadDeadline(time.Now().Add(s.ttl))
+		} else {
+			_ = conn.SetReadDeadline(time.Time{})
+		}
 
 		// считываем заголовок пакета
 		headerBuf := make([]byte, headerLen)
 		_, err := io.ReadFull(conn, headerBuf)
-
-		switch err {
-		case nil:
-			connTimer.Reset(s.ttl)
-
-			// если пакет не егтс формата закрываем соединение
-			if headerBuf[0] != 0x01 {
-				log.WithField("ip", conn.RemoteAddr()).Warn("Пакет не соответствует формату ЕГТС. Закрыто соединение")
-				return
+		if err != nil {
+			if ne, ok := err.(net.Error); ok && ne.Timeout() {
+				log.WithField("ip", conn.RemoteAddr()).Warn("Таймаут чтения")
+			} else if err == io.EOF {
+				log.WithField("ip", conn.RemoteAddr()).Info("Клиент закрыл соединение")
+			} else {
+				log.WithField("err", err).Error("Ошибка при получении")
 			}
-
-			// вычисляем длину пакета, равную длине заголовка (HL) + длина тела (FDL) + CRC пакета 2 байта если есть FDL из приказа минтранса №285
-			bodyLen := binary.LittleEndian.Uint16(headerBuf[5:7])
-			pkgLen := uint16(headerBuf[3])
-			if bodyLen > 0 {
-				pkgLen += bodyLen + 2
-			}
-			// получаем концовку ЕГТС пакета
-			buf := make([]byte, pkgLen-headerLen)
-			if _, err := io.ReadFull(conn, buf); err != nil {
-				log.WithField("err", err).Error("Ошибка при получении тела пакета")
-				return
-			}
-
-			// формируем полный пакет
-			recvPacket = append(headerBuf, buf...)
-		case io.EOF:
-			<-connTimer.C
-			log.WithField("ip", conn.RemoteAddr()).Warnf("Соединение закрыто по таймауту")
-			return
-		default:
-			log.WithField("err", err).Error("Ошибка при получении")
+			_ = conn.SetDeadline(time.Time{})
 			return
 		}
+
+		// если пакет не егтс формата закрываем соединение
+		if headerBuf[0] != 0x01 {
+			log.WithField("ip", conn.RemoteAddr()).Warn("Пакет не соответствует формату ЕГТС. Закрыто соединение")
+			_ = conn.SetDeadline(time.Time{})
+			return
+		}
+
+		// вычисляем длину пакета, равную длине заголовка (HL) + длина тела (FDL) + CRC пакета 2 байта если есть FDL из приказа минтранса №285
+		bodyLen := binary.LittleEndian.Uint16(headerBuf[5:7])
+		pkgLen := uint16(headerBuf[3])
+		if bodyLen > 0 {
+			pkgLen += bodyLen + 2
+		}
+
+		if s.ttl > 0 {
+			_ = conn.SetReadDeadline(time.Now().Add(s.ttl))
+		} else {
+			_ = conn.SetReadDeadline(time.Time{})
+		}
+
+		// получаем концовку ЕГТС пакета
+		buf := make([]byte, pkgLen-headerLen)
+		if _, err := io.ReadFull(conn, buf); err != nil {
+			if ne, ok := err.(net.Error); ok && ne.Timeout() {
+				log.WithField("ip", conn.RemoteAddr()).Warn("Таймаут чтения")
+			} else {
+				log.WithField("err", err).Error("Ошибка при получении тела пакета")
+			}
+			_ = conn.SetDeadline(time.Time{})
+			return
+		}
+
+		// формируем полный пакет
+		recvPacket = append(headerBuf, buf...)
+		_ = conn.SetReadDeadline(time.Time{})
 
 		log.WithField("packet", recvPacket).Debug("Принят пакет")
 		pkg := egts.Package{}

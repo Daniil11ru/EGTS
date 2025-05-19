@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/kuznetsovin/egts-protocol/libs/egts"
 	"net"
 	"os"
 	"time"
+
+	"github.com/kuznetsovin/egts-protocol/libs/egts"
 )
 
 /*
