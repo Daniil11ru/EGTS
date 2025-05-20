@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	egtsPcOk  = 0
-	headerLen = 10
+	egtsPcOk         = 0
+	egtsPcSrvcDenied = 0x95
+	headerLen        = 10
 )
 
 type Server struct {

@@ -163,21 +163,38 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 		isPkgSave := false
 		packetIDBytes := make([]byte, 4)
 
-		srResponsesRecord = append(srResponsesRecord, egts.RecordData{
-			SubrecordType:   egts.SrRecordResponseType,
-			SubrecordLength: 3,
-			SubrecordData: &egts.SrResponse{
-				ConfirmedRecordNumber: rec.RecordNumber,
-				RecordStatus:          egtsPcOk,
-			},
-		})
+		// TODO: узнать, нужно ли проверять Recipient Service Type
 		serviceType = rec.SourceServiceType
 		log.Debug("Тип сервиса: ", serviceType)
+
+		if serviceType != 2 {
+			log.Warn("Неподдерживаемый сервис")
+			srResponsesRecord = append(srResponsesRecord, egts.RecordData{
+				SubrecordType:   egts.SrRecordResponseType,
+				SubrecordLength: 3,
+				SubrecordData: &egts.SrResponse{
+					ConfirmedRecordNumber: rec.RecordNumber,
+					RecordStatus:          egtsPcSrvcDenied,
+				},
+			})
+
+			continue
+		} else {
+			srResponsesRecord = append(srResponsesRecord, egts.RecordData{
+				SubrecordType:   egts.SrRecordResponseType,
+				SubrecordLength: 3,
+				SubrecordData: &egts.SrResponse{
+					ConfirmedRecordNumber: rec.RecordNumber,
+					RecordStatus:          egtsPcOk,
+				},
+			})
+		}
 
 		if rec.ObjectIDFieldExists == "1" {
 			client = rec.ObjectIdentifier
 		}
 
+		// TODO: отправлять ошибку при нахождении подзаписи неподдерживаемого типа
 		for _, subRec := range rec.RecordDataSet {
 			switch subRecData := subRec.SubrecordData.(type) {
 			case *egts.SrTermIdentity:

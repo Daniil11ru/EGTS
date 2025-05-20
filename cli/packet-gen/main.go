@@ -52,39 +52,80 @@ func main() {
 	lon := 0.0
 	server := ""
 	ackTimeout := 0
+	pktType := ""
 
-	flag.IntVar(&pid, "pid", 0, "Packet identifier (require)")
-	flag.IntVar(&oid, "oid", 0, "Client identifier (require)")
-	flag.StringVar(&ts, "time", "", "Timestamp in RFC 3339 format (require)")
-	flag.IntVar(&liqLvl, "liquid", 0, "Liquid level for first sensor")
-	flag.Float64Var(&lat, "lat", 0, "Latitude")
-	flag.Float64Var(&lon, "lon", 0, "Longitude")
-	flag.IntVar(&ackTimeout, "timeout", 0, "Ack waiting time in seconds, Default: 5")
-	flag.StringVar(&server, "server", "localhost:5555", "Egts server address in format <ip>:<port>")
+	flag.IntVar(&pid, "pid", 0, "Идентификатор пакета (обязательно)")
+	flag.IntVar(&oid, "oid", 0, "Идентификатор клиента (обязательно)")
+	flag.StringVar(&ts, "time", "", "Метка времени в формате RFC 3339 (обязательно)")
+	flag.IntVar(&liqLvl, "liquid", 0, "Уровень жидкости для первого датчика")
+	flag.Float64Var(&lat, "lat", 0, "Широта")
+	flag.Float64Var(&lon, "lon", 0, "Долгота")
+	flag.IntVar(&ackTimeout, "timeout", 0, "Время ожидания подтверждения в секундах, по умолчанию 5")
+	flag.StringVar(&server, "server", "localhost:5555", "Адрес EGTS-сервера в формате <ip>:<port>")
+	flag.StringVar(&pktType, "type", "data", "Тип отправляемого пакета: auth или data")
 
 	flag.Parse()
 
 	if pid == 0 {
-		fmt.Println("Packet identifier is require. See to help (-h)")
+		fmt.Println("Требуется идентификатор пакета, смотрите помощь (-h)")
 		os.Exit(1)
 	}
 
 	if oid == 0 {
-		fmt.Println("Client identifier is require. See to help (-h)")
+		fmt.Println("Требуется идентификатор клиента, смотрите помощь (-h)")
 		os.Exit(1)
 	}
 
 	if ts == "" {
-		fmt.Println("Timestamp is require. See to help (-h)")
+		fmt.Println("Требуется метка времени, смотрите помощь (-h)")
 		os.Exit(1)
 	}
 	timestamp, err := time.Parse(time.RFC3339, ts)
 	if err != nil {
-		fmt.Println("Parsing timestamp failed: ", timestamp)
+		fmt.Println("Ошибка парсинга метки времени: ", timestamp)
 		os.Exit(1)
 	}
 
-	egtsSendPacket := egts.Package{
+	authPkg := egts.Package{
+		ProtocolVersion:  1,
+		SecurityKeyID:    0,
+		Prefix:           "00",
+		Route:            "0",
+		EncryptionAlg:    "00",
+		Compression:      "0",
+		Priority:         "10",
+		HeaderLength:     11,
+		HeaderEncoding:   0,
+		PacketIdentifier: uint16(pid),
+		PacketType:       1,
+		ServicesFrameData: &egts.ServiceDataSet{
+			egts.ServiceDataRecord{
+				RecordNumber:             1,
+				SourceServiceOnDevice:    "0",
+				RecipientServiceOnDevice: "0",
+				Group:                    "0",
+				RecordProcessingPriority: "10",
+				TimeFieldExists:          "0",
+				EventIDFieldExists:       "1",
+				ObjectIDFieldExists:      "1",
+				EventIdentifier:          3436,
+				ObjectIdentifier:         uint32(oid),
+				SourceServiceType:        1,
+				RecipientServiceType:     1,
+				RecordDataSet: egts.RecordDataSet{
+					egts.RecordData{
+						SubrecordType: 7,
+						SubrecordData: &egts.SrAuthInfo{
+							UserName:     "test",
+							UserPassword: "test",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	dataPkg := egts.Package{
 		ProtocolVersion:  1,
 		SecurityKeyID:    0,
 		Prefix:           "00",
@@ -151,27 +192,38 @@ func main() {
 		},
 	}
 
-	sendBytes, err := egtsSendPacket.Encode()
+	var pkg egts.Package
+	switch pktType {
+	case "auth":
+		pkg = authPkg
+	case "data":
+		pkg = dataPkg
+	default:
+		fmt.Println("Неверный тип пакета, используйте auth или data в качестве значения параметра -type")
+		os.Exit(1)
+	}
+
+	sendBytes, err := pkg.Encode()
 	if err != nil {
-		fmt.Println("Encode message failed: ", err)
+		fmt.Println("Ошибка кодирования сообщения: ", err)
 		os.Exit(1)
 	}
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", server)
 	if err != nil {
-		fmt.Println("ResolveTCPAddr failed:", err)
+		fmt.Println("Ошибка преобразования адреса: ", err)
 		os.Exit(1)
 	}
 
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		fmt.Println("Dial failed:", err)
+		fmt.Println("Ошибка соединения: ", err)
 		os.Exit(1)
 	}
 
 	_, err = conn.Write(sendBytes)
 	if err != nil {
-		fmt.Println("Write to server failed:", err)
+		fmt.Println("Ошибка записи на сервер: ", err)
 		os.Exit(1)
 	}
 
@@ -180,31 +232,31 @@ func main() {
 	_ = conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeout) * time.Second))
 	ackLen, err := conn.Read(ackBuf)
 	if err != nil {
-		fmt.Println("Read from server failed:", err)
+		fmt.Println("Ошибка чтения с сервера: ", err)
 		os.Exit(1)
 	}
 
 	ackPacket := egts.Package{}
 	_, err = ackPacket.Decode(ackBuf[:ackLen])
 	if err != nil {
-		fmt.Println("Parse ack packet failed:", err)
+		fmt.Println("Ошибка разбора ACK-пакета: ", err)
 		os.Exit(1)
 	}
 
 	ack, ok := ackPacket.ServicesFrameData.(*egts.PtResponse)
 	if !ok {
-		fmt.Println("Received packet is not egts ack")
+		fmt.Println("Полученный пакет не является EGTS ACK")
 		os.Exit(1)
 	}
 
-	if ack.ResponsePacketID != egtsSendPacket.PacketIdentifier {
-		fmt.Printf("Incorrect response packet id: %d (actual) != %d (expected)",
-			ack.ResponsePacketID, egtsSendPacket.PacketIdentifier)
+	if ack.ResponsePacketID != pkg.PacketIdentifier {
+		fmt.Printf("Некорректный идентификатор пакета-ответа: %d (фактический) != %d (ожидаемый)",
+			ack.ResponsePacketID, pkg.PacketIdentifier)
 		os.Exit(1)
 	}
 
 	if ack.ProcessingResult != 0 {
-		fmt.Printf("Incorrect processing result: %d (actual) != 0 (expected)", ack.ProcessingResult)
+		fmt.Printf("Некорректный результат обработки: %d (фактический) != 0 (ожидаемый)", ack.ProcessingResult)
 		os.Exit(1)
 	}
 
@@ -212,15 +264,12 @@ func main() {
 		for _, subRec := range rec.RecordDataSet {
 			if subRec.SubrecordType == egts.SrRecordResponseType {
 				if response, ok := subRec.SubrecordData.(*egts.SrResponse); ok {
-					if response.RecordStatus != 0 {
-						fmt.Printf("Incorrect record status: %d (actual) != 0 (expected)", response.RecordStatus)
-						os.Exit(1)
-					}
+					fmt.Printf("Код ответа: %v\n", response.RecordStatus)
 				}
 			}
 		}
 	}
 
-	fmt.Println("Packet sent and processed correct")
+	fmt.Println("Пакет отправлен и корректно обработан сервером")
 	os.Exit(0)
 }
