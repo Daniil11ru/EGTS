@@ -14,6 +14,7 @@ import (
 const (
 	egtsPcOk         = 0
 	egtsPcSrvcDenied = 0x95
+	egtsPcUnsType    = 133
 	headerLen        = 10
 )
 
