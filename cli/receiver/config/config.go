@@ -18,6 +18,8 @@ type Settings struct {
 	Port     string                       `yaml:"port"`
 	ConnTTl  int                          `yaml:"conn_ttl"`
 	LogLevel string                       `yaml:"log_level"`
+	LogFilePath string                    `yaml:"log_file_path"`
+	LogMaxAgeDays int                     `yaml:"log_max_age_days"`
 	Store    map[string]map[string]string `yaml:"storage"`
 }
 
