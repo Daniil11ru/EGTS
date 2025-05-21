@@ -62,7 +62,7 @@ func main() {
 	flag.Float64Var(&lon, "lon", 0, "Долгота")
 	flag.IntVar(&ackTimeout, "timeout", 0, "Время ожидания подтверждения в секундах, по умолчанию 5")
 	flag.StringVar(&server, "server", "localhost:5555", "Адрес EGTS-сервера в формате <ip>:<port>")
-	flag.StringVar(&pktType, "type", "data", "Тип отправляемого пакета: auth или data")
+	flag.StringVar(&pktType, "type", "data", "Тип отправляемого пакета: auth, tele, mixed")
 
 	flag.Parse()
 
@@ -125,7 +125,7 @@ func main() {
 		},
 	}
 
-	dataPkg := egts.Package{
+	mixedDataPkg := egts.Package{
 		ProtocolVersion:  1,
 		SecurityKeyID:    0,
 		Prefix:           "00",
@@ -192,14 +192,72 @@ func main() {
 		},
 	}
 
+	telematicDataPkg := egts.Package{
+		ProtocolVersion:  1,
+		SecurityKeyID:    0,
+		Prefix:           "00",
+		Route:            "0",
+		EncryptionAlg:    "00",
+		Compression:      "0",
+		Priority:         "10",
+		HeaderLength:     11,
+		HeaderEncoding:   0,
+		PacketIdentifier: uint16(pid),
+		PacketType:       1,
+		ServicesFrameData: &egts.ServiceDataSet{
+			egts.ServiceDataRecord{
+				RecordNumber:             1,
+				SourceServiceOnDevice:    "0",
+				RecipientServiceOnDevice: "0",
+				Group:                    "0",
+				RecordProcessingPriority: "10",
+				TimeFieldExists:          "0",
+				EventIDFieldExists:       "1",
+				ObjectIDFieldExists:      "1",
+				EventIdentifier:          3436,
+				ObjectIdentifier:         uint32(oid),
+				SourceServiceType:        2,
+				RecipientServiceType:     2,
+				RecordDataSet: egts.RecordDataSet{
+					egts.RecordData{
+						SubrecordType: 16,
+						SubrecordData: &egts.SrPosData{
+							NavigationTime:      time.Date(2021, time.February, 20, 0, 30, 40, 0, time.UTC),
+							Latitude:            lat,
+							Longitude:           lon,
+							ALTE:                "1",
+							LOHS:                "0",
+							LAHS:                "0",
+							MV:                  "1",
+							BB:                  "1",
+							CS:                  "0",
+							FIX:                 "1",
+							VLD:                 "1",
+							DirectionHighestBit: 0,
+							AltitudeSign:        0,
+							Speed:               34,
+							Direction:           172,
+							Odometer:            191,
+							DigitalInputs:       144,
+							Source:              0,
+							Altitude:            30,
+						},
+					},
+				},
+			},
+		},
+	}
+
 	var pkg egts.Package
 	switch pktType {
 	case "auth":
 		pkg = authPkg
-	case "data":
-		pkg = dataPkg
+	case "mixed":
+		pkg = mixedDataPkg
+	case "tele":
+		pkg = telematicDataPkg
 	default:
-		fmt.Println("Неверный тип пакета, используйте auth или data в качестве значения параметра -type")
+		fmt.Println("Неверный тип пакета, используйте auth, tele или mixed в качестве значения параметра -type")
 		os.Exit(1)
 	}
 

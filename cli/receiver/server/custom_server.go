@@ -160,9 +160,6 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 			PacketID: uint32(pkg.PacketIdentifier),
 		}
 
-		isPkgSave := false
-		packetIDBytes := make([]byte, 4)
-
 		// TODO: узнать, нужно ли проверять Recipient Service Type
 		serviceType = rec.SourceServiceType
 		log.Debug("Тип сервиса: ", serviceType)
@@ -179,41 +176,42 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 			})
 
 			continue
-		} else {
-			srResponsesRecord = append(srResponsesRecord, egts.RecordData{
-				SubrecordType:   egts.SrRecordResponseType,
-				SubrecordLength: 3,
-				SubrecordData: &egts.SrResponse{
-					ConfirmedRecordNumber: rec.RecordNumber,
-					RecordStatus:          egtsPcOk,
-				},
-			})
 		}
 
 		if rec.ObjectIDFieldExists == "1" {
 			client = rec.ObjectIdentifier
 		}
 
-		// TODO: отправлять ошибку при нахождении подзаписи неподдерживаемого типа
+		var (
+			recStatus uint8 = egtsPcOk
+			isPkgSave bool  = false
+		)
+
+		/*
+			TODO:
+			добавить обработку
+			EGTS_SR_LOOPIN_DATA,
+			EGTS_SR_ABS_DIG_SENS_DATA,
+			EGTS_SR_ABS_ABS_LOOPIN_DATA
+		*/
 		for _, subRec := range rec.RecordDataSet {
 			switch subRecData := subRec.SubrecordData.(type) {
-			case *egts.SrTermIdentity:
-				log.Debug("Разбор подзаписи EGTS_SR_TERM_IDENTITY")
-				client = subRecData.TerminalIdentifier
-				if bytes, err := createSrResultCode(pkg.PacketIdentifier, egtsPcOk); err == nil {
-					srResultCodePkg = bytes
-				} else {
-					log.Errorf("Ошибка сборки EGTS_SR_RESULT_CODE: %v", err)
-				}
-			case *egts.SrAuthInfo:
-				log.Debug("Разбор подзаписи EGTS_SR_AUTH_INFO")
-				if bytes, err := createSrResultCode(pkg.PacketIdentifier, egtsPcOk); err == nil {
-					srResultCodePkg = bytes
-				} else {
-					log.Errorf("Ошибка сборки EGTS_SR_RESULT_CODE: %v", err)
-				}
 			case *egts.SrResponse:
-				log.Debug("Разбор подзаписи EGTS_SR_RESPONSE")
+				log.Debug("Встречена подзапись EGTS_SR_RESPONSE")
+			case *egts.SrAdSensorsData:
+				log.Debug("Встречена подзапись EGTS_SR_AD_SENSORS_DATA")
+			case *egts.SrCountersData:
+				log.Debug("Встречена подзапись EGTS_SR_COUNTERS_DATA")
+			case *egts.SrStateData:
+				log.Debug("Встречена подзапись EGTS_SR_STATE_DATA")
+			case *egts.SrAbsAnSensData:
+				log.Debug("Встречена подзапись EGTS_SR_ABS_AN_SENS_DATA")
+			case *egts.SrAbsCntrData:
+				log.Debug("Встречена подзапись EGTS_SR_ABS_CNTR_DATA")
+			case *egts.SrLiquidLevelSensor:
+				log.Debug("Встречена подзапись EGTS_SR_LIQUID_LEVEL_SENSOR")
+			case *egts.SrPassengersCountersData:
+				log.Debug("Встречена подзапись EGTS_SR_PASSENGERS_COUNTERS_DATA")
 			case *egts.SrPosData:
 				log.Debug("Разбор подзаписи EGTS_SR_POS_DATA")
 				isPkgSave = true
@@ -230,65 +228,24 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 				exportPacket.Hdop = subRecData.HorizontalDilutionOfPrecision
 				exportPacket.Vdop = subRecData.VerticalDilutionOfPrecision
 				exportPacket.Ns = subRecData.NavigationSystem
-			case *egts.SrAdSensorsData:
-				log.Debug("Разбор подзаписи EGTS_SR_AD_SENSORS_DATA")
-				if subRecData.AnalogSensorFieldExists1 == "1" {
-					exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 1, Value: subRecData.AnalogSensor1})
-				}
-				if subRecData.AnalogSensorFieldExists2 == "1" {
-					exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 2, Value: subRecData.AnalogSensor2})
-				}
-				if subRecData.AnalogSensorFieldExists3 == "1" {
-					exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 3, Value: subRecData.AnalogSensor3})
-				}
-				if subRecData.AnalogSensorFieldExists4 == "1" {
-					exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 4, Value: subRecData.AnalogSensor4})
-				}
-				if subRecData.AnalogSensorFieldExists5 == "1" {
-					exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 5, Value: subRecData.AnalogSensor5})
-				}
-				if subRecData.AnalogSensorFieldExists6 == "1" {
-					exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 6, Value: subRecData.AnalogSensor6})
-				}
-				if subRecData.AnalogSensorFieldExists7 == "1" {
-					exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 7, Value: subRecData.AnalogSensor7})
-				}
-				if subRecData.AnalogSensorFieldExists8 == "1" {
-					exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 8, Value: subRecData.AnalogSensor8})
-				}
-			case *egts.SrAbsAnSensData:
-				log.Debug("Разбор подзаписи EGTS_SR_ABS_AN_SENS_DATA")
-				exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: subRecData.SensorNumber, Value: subRecData.Value})
-			case *egts.SrAbsCntrData:
-				log.Debug("Разбор подзаписи EGTS_SR_ABS_CNTR_DATA")
-				switch subRecData.CounterNumber {
-				case 110:
-					binary.BigEndian.PutUint32(packetIDBytes, subRecData.CounterValue)
-					exportPacket.PacketID = subRecData.CounterValue
-				case 111:
-					tmp := make([]byte, 4)
-					binary.BigEndian.PutUint32(tmp, subRecData.CounterValue)
-					packetIDBytes[3] = tmp[3]
-					exportPacket.PacketID = binary.LittleEndian.Uint32(packetIDBytes)
-				}
-			case *egts.SrLiquidLevelSensor:
-				log.Debug("Разбор подзаписи EGTS_SR_LIQUID_LEVEL_SENSOR")
-				sensorData := storage.LiquidSensor{
-					SensorNumber: subRecData.LiquidLevelSensorNumber,
-					ErrorFlag:    subRecData.LiquidLevelSensorErrorFlag,
-				}
-				switch subRecData.LiquidLevelSensorValueUnit {
-				case "00", "01":
-					sensorData.ValueMm = subRecData.LiquidLevelSensorData
-				case "10":
-					sensorData.ValueL = subRecData.LiquidLevelSensorData * 10
-				}
-				exportPacket.LiquidSensors = append(exportPacket.LiquidSensors, sensorData)
+			default:
+				log.Warnf("Неподдерживаемая подзапись SRT=%d в записи RN=%d",
+					subRec.SubrecordType, rec.RecordNumber)
+				recStatus = egtsPcUnsType
 			}
 		}
 
+		srResponsesRecord = append(srResponsesRecord, egts.RecordData{
+			SubrecordType:   egts.SrRecordResponseType,
+			SubrecordLength: 3,
+			SubrecordData: &egts.SrResponse{
+				ConfirmedRecordNumber: rec.RecordNumber,
+				RecordStatus:          recStatus,
+			},
+		})
+
 		exportPacket.Client = client
-		if isPkgSave {
+		if isPkgSave && recStatus == egtsPcOk {
 			if err := s.store.Save(&exportPacket); err != nil {
 				log.WithField("err", err).Error("Ошибка сохранения телеметрии")
 			}
