@@ -3,7 +3,7 @@ port: "7000"
 conn_ttl: 5
 log_level: "DEBUG"
 log_file_path: "logs/app.log"
-log_max_age_days: 1
+log_max_age_days: 366
 
 storage:
   postgresql:

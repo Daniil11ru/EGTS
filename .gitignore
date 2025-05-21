@@ -29,3 +29,5 @@ bin/
 .vscode/
 receiver/debug
 .DS_Store
+
+logs/
