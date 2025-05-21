@@ -14,6 +14,7 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/tarantool/go-tarantool v0.0.0-20190330192518-aaa93c4bdc35
 	google.golang.org/appengine v1.6.5 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
