@@ -187,13 +187,6 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 			isPkgSave bool  = false
 		)
 
-		/*
-			TODO:
-			добавить обработку
-			EGTS_SR_LOOPIN_DATA,
-			EGTS_SR_ABS_DIG_SENS_DATA,
-			EGTS_SR_ABS_ABS_LOOPIN_DATA
-		*/
 		for _, subRec := range rec.RecordDataSet {
 			switch subRecData := subRec.SubrecordData.(type) {
 			case *egts.SrResponse:
@@ -212,6 +205,12 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 				log.Debug("Встречена подзапись EGTS_SR_LIQUID_LEVEL_SENSOR")
 			case *egts.SrPassengersCountersData:
 				log.Debug("Встречена подзапись EGTS_SR_PASSENGERS_COUNTERS_DATA")
+			case *egts.SrLoopinData:
+				log.Debug("Встречена подзапись EGTS_SR_LOOPIN_DATA")
+			case *egts.SrAbsDigSensData:
+				log.Debug("Встречена подзапись EGTS_SR_ABS_DIG_SENS_DATA")
+			case *egts.SrAbsLoopinData:
+				log.Debug("Встречена подзапись EGTS_SR_ABS_LOOPIN_DATA")
 			case *egts.SrPosData:
 				log.Debug("Разбор подзаписи EGTS_SR_POS_DATA")
 				isPkgSave = true

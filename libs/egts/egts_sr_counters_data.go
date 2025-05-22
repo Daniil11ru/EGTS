@@ -146,56 +146,56 @@ func (c *SrCountersData) Encode() ([]byte, error) {
 	if c.CounterFieldExists1 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter1)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("не удалось запистаь показания CN1: %v", err)
+			return result, fmt.Errorf("не удалось записать показания CN1: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists2 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter2)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("не удалось запистаь показания CN2: %v", err)
+			return result, fmt.Errorf("не удалось записать показания CN2: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists3 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter3)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("не удалось запистаь показания CN3: %v", err)
+			return result, fmt.Errorf("не удалось записать показания CN3: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists4 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter4)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("не удалось запистаь показания CN4: %v", err)
+			return result, fmt.Errorf("не удалось записать показания CN4: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists5 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter5)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("не удалось запистаь показания CN5: %v", err)
+			return result, fmt.Errorf("не удалось записать показания CN5: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists6 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter6)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("не удалось запистаь показания CN6: %v", err)
+			return result, fmt.Errorf("не удалось записать показания CN6: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists7 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter7)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("не удалось запистаь показания CN7: %v", err)
+			return result, fmt.Errorf("не удалось записать показания CN7: %v", err)
 		}
 	}
 
 	if c.CounterFieldExists8 == "1" {
 		binary.LittleEndian.PutUint32(sensVal, c.Counter8)
 		if _, err = buf.Write(sensVal[:3]); err != nil {
-			return result, fmt.Errorf("не удалось запистаь показания CN8: %v", err)
+			return result, fmt.Errorf("не удалось записать показания CN8: %v", err)
 		}
 	}
 

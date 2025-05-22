@@ -181,7 +181,7 @@ func (e *SrPosData) Encode() ([]byte, error) {
 	bytesTmpBuf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bytesTmpBuf, e.Odometer)
 	if _, err = buf.Write(bytesTmpBuf[:3]); err != nil {
-		return result, fmt.Errorf("не удалось запсиать пройденное расстояние (пробег) в км: %v", err)
+		return result, fmt.Errorf("не удалось записать пройденное расстояние (пробег) в км: %v", err)
 	}
 
 	if err = binary.Write(buf, binary.LittleEndian, e.DigitalInputs); err != nil {
