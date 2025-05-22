@@ -1,0 +1,23 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: egts
+    env_file:
+      - .env
+    ports:
+      - "$APP_PORT:$APP_PORT"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - wait-for-db
+
+  # Вспомогательный сервис для ожидания доступности БД перед запуском приложения
+  wait-for-db:
+    image: busybox
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: sh -c "until nc -z host.docker.internal 5432; do echo Waiting for database; sleep 2; done"
+    depends_on: []
