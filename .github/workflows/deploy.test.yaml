@@ -44,10 +44,10 @@ jobs:
         run: docker --context ci login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_TOKEN }}
 
       - name: compose-pull
-        run: docker --context ci compose --env-file .env -f docker-compose.yml -f docker-compose.deploy.test.yml pull
+        run: docker --context ci compose --env-file .env -f docker-compose.override.yml -f docker-compose.test.yml pull
 
       - name: compose-up
-        run: docker --context ci compose --env-file .env -f docker-compose.yml -f docker-compose.deploy.test.yml up -d --pull always --force-recreate --remove-orphans
+        run: docker --context ci compose --env-file .env -f docker-compose.override.yml -f docker-compose.test.yml up -d --pull always --force-recreate --remove-orphans
 
       - name: cleanup-context
         if: always()

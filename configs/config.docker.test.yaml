@@ -10,7 +10,7 @@ storage:
     host: "host.docker.internal"
     port: "5432"
     user: "postgres"
-    password: "123"
+    password: "11062001"
     database: "egts"
     table: "point"
-    sslmode: disable
+    sslmode: require
