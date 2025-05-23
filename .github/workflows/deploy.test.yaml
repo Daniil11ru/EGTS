@@ -27,6 +27,7 @@ jobs:
       - uses: docker/build-push-action@v5
         with:
           context: .
+          file: Dockerfile.test
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
