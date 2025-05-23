@@ -6,7 +6,7 @@ services:
     ports:
       - "$APP_PORT:$APP_PORT"
     volumes:
-      - app-logs:/app/logs
+      - app-logs:/logs
 
 volumes:
   app-logs:
