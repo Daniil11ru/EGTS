@@ -13,4 +13,4 @@ storage:
     password: "123"
     database: "egts"
     table: "point"
-    sslmode: disable
+    sslmode: enable
