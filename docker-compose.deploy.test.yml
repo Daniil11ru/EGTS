@@ -5,3 +5,8 @@ services:
       - .env
     ports:
       - "$APP_PORT:$APP_PORT"
+    volumes:
+      - app-logs:/app/logs
+
+volumes:
+  app-logs:
