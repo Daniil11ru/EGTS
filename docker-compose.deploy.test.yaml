@@ -1,0 +1,7 @@
+services:
+  app:
+    image: "${REGISTRY}/${IMAGE_OWNER}/${IMAGE_NAME}:${IMAGE_TAG}"
+    env_file:
+      - .env
+    ports:
+      - "$APP_PORT:$APP_PORT"

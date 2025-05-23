@@ -9,13 +9,12 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: egts-receiver
-      IMAGE_TAG: ${{ github.ref_name }}
+      IMAGE_TAG: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set lowercase owner
-        run: |
-          echo "IMAGE_OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      - name: set-lowercase-owner
+        run: echo "IMAGE_OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - uses: docker/setup-buildx-action@v3
 
@@ -35,18 +34,21 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.ACTIONS_SSH_KEY }}
 
-      - name: Trust host
+      - name: trust-host
         run: ssh-keyscan -H ${{ secrets.TEST_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Create remote context
+      - name: create-remote-context
         run: docker context create ci --docker "host=ssh://deploy@${{ secrets.TEST_HOST }}"
 
-      - name: Compose pull
-        run: docker --context ci compose -f docker-compose.yml pull
+      - name: remote-login-ghcr
+        run: docker --context ci login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_TOKEN }}
 
-      - name: Compose up
-        run: docker --context ci compose -f docker-compose.yml up -d --remove-orphans
+      - name: compose-pull
+        run: docker --context ci compose --env-file .env -f docker-compose.yml -f docker-compose.deploy.test.yml pull
 
-      - name: Cleanup context
+      - name: compose-up
+        run: docker --context ci compose --env-file .env -f docker-compose.yml -f docker-compose.deploy.test.yml up -d --pull always --force-recreate --remove-orphans
+
+      - name: cleanup-context
         if: always()
         run: docker context rm -f ci
