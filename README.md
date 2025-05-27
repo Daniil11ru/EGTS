@@ -1,100 +1,26 @@
-# EGTS receiver
+# EGTS-сервер
 
-EGTS receiver server realization writen on Go. 
+Данный проект включает в себя как библиотеку для кодирования и декодирования EGTS-пакетов, так и непосредственно сам сервер, а также генератор пакетов и плагины для баз данных.
 
-Library for implementation EGTS protocol that parsing binary packag based on 
-[GOST R 54619 - 2011](./docs`/gost54619-2011.pdf) and 
-[Order No. 285 of the Ministry of Transport of Russia dated July 31, 2012](./docs/mitransNo285.pdf). 
-Describe fields you can find in these documents. 
+## Быстрые ссылки
 
-More information you can read in [article](https://www.swe-notes.ru/post/protocol-egts/) (Russian).
- 
-Server save all navigation data from ```EGTS_SR_POS_DATA``` section. If packet have several records with 
-```EGTS_SR_POS_DATA``` section, it saves all of them. 
+* [Библиотека](#библиотека);
+* [Сервер](#сервер);
+* [Плагины](#плагины);
+* [Установка](#установка);
+* [Запуск](#запуск);
+* [Запуск в Docker](#запуск-в-docker);
+* [Формат конфигурационного файла](#формат-конфигурационного-файла);
+* [Развертывание контейнера на тестовом Debian-сервере](#развертывание-контейнера-на-тестовом-debian-сервере).
 
-Storage for data realized as plugins. Any plugin must have ```[store]``` section in configure file. 
-Plugin interface will be described below.
+## Библиотека
+Библиотека основана на:
+* [ГОСТ №54619 от 2011 года](./docs/gost54619-2011.pdf);
+* [Приказ №285 Министерства транспорта Российской Федерации от 31.07.2012](./docs/mitrans285.pdf).
 
-If configure file has't section for a plugin (```[store]```), then packet will be print to stdout.
+Больше информации о протоколе можно найти на [данном ресурсе](https://www.swe-notes.ru/post/protocol-egts/).
 
-## Install
-
-```bash
-git clone https://github.com/kuznetsovin/egts-protocol
-cd egts-protocol
-make
-```
-
-## Run
-
-```bash
-./bin/receiver -c config.yaml
-```
-
-```config.yaml``` - configure file
-
-## Docker
-
-Build image
-
-```bash
-make docker
-```
-
-Start container:
-
-```bash
-docker run --name egts-receiver egts:latest
-```
-
-Start container with custom port and config:
-```bash
-docker run --name egts-receiver -v ./configs:/etc/egts-receiver -p 6000:6000 egts:latest
-```
-
-Example docker-compose:
-
-```yaml
-version: '3'
-
-services:
-  redis:
-    image: redis:latest
-    container_name: egts_redis
-
-  egts:
-    image: egts:latest
-    container_name: egts_receiver
-    ports:
-      - "6000:6000"
-
-    volumes:
-      - ./configs:/etc/egts-receviver/
-```
-
-## Config format
-
-```yaml
-host: "127.0.0.1"
-port: "6000"
-con_live_sec: 10
-log_level: "DEBUG"
-
-storage:
-```
-
-Parameters description:
-
-- *host* - bind address  
-- *port* - bind port 
-- *conn_ttl* - if server not received data longer time in the parameter, then the connection is closed. 
-- *log_level* - logging level
-- *storage* - section with storage configs. (see [example](./configs/receiver.yaml))
-
-## Usage only Golang EGTS library
-
-Example for encoding packet:
-
+Пример кодирования пакета:
 ```go
 package main 
 
@@ -131,11 +57,9 @@ func main() {
     
     log.Println("Bytes packet: ", rawPkg)
 }
-
 ```
 
-Example for decoding packet:
-
+Пример декодирования пакета:
 ```go
 package main 
 
@@ -158,10 +82,12 @@ func main() {
 }
 ```
 
-# Store plugins
+## Сервер 
+Сервер обрабатывает и по возможности сохраняет всю телематическую информацию из подзаписей типа ```EGTS_SR_POS_DATA```. Если пакет содержит несколько таких подзаписей, то сервер обрабатывает каждую из них.
 
-That create a new plugin you must implement ```Connector``` interface:
+## Плагины
 
+Для подключения баз данных используются плагины. Каждый плагин должен иметь секцию ```[storage]``` в конфигурационном файле. Также каждый плагин должен реализовывать интерфейс ```Connector```, который представлен ниже.
 ```go
 type Connector interface {
 	// setup store connection
@@ -175,4 +101,118 @@ type Connector interface {
 }
 ```
 
-All plugins available in [store folder](/cli/receiver/storage/store).
+Если конфигурационный файл не имеет секции ```storage```, то будет использоваться стандартный вывод.
+
+Все плагины находятся в [данной директории](/cli/receiver/storage/store).
+
+## Установка
+
+```bash
+git clone https://github.com/Daniil11ru/EGTS
+cd egts-protocol
+make
+```
+
+## Запуск
+
+```bash
+./bin/receiver -c config.yaml
+```
+
+```config.yaml``` – конфигурационный файл.
+
+## Запуск в Docker
+
+Соберите образ:
+```bash
+make docker
+```
+
+Запустите контейнер:
+
+<ul>
+
+<li>
+
+Без указания конфигурационного файла и порта:
+
+```bash
+docker run --name egts-receiver egts:latest
+```
+
+</li>
+
+<li>
+
+С указанием конфигурационного файла и порта:
+
+```bash
+docker run --name egts-receiver -v ./configs:/etc/egts-receiver -p 6000:6000 egts:latest
+```
+
+</li>
+
+</ul>
+
+Пример ```docker-compose.yml```:
+
+```yaml
+version: '3'
+
+services:
+  redis:
+    image: redis:latest
+    container_name: egts_redis
+
+  egts:
+    image: egts:latest
+    container_name: egts_receiver
+    ports:
+      - "6000:6000"
+
+    volumes:
+      - ./configs:/etc/egts-receiver/
+```
+
+## Формат конфигурационного файла
+
+```yaml
+host: "127.0.0.1"
+port: "6000"
+conn_ttl: 10
+log_level: "DEBUG"
+
+storage:
+```
+
+Описание параметров:
+- *host* – адрес;  
+- *port* – порт;
+- *conn_ttl* – если сервер не получает информацию дольше указанного количества секунд, то соединение закрывается;
+- *log_level* – уровень журналирования;
+- *storage* – секция для указания информации о хранилищах.
+
+## Развертывание контейнера на тестовом Debian-сервере
+1. Установить *Docker* и *Docker Compose* на тестовом сервере;
+2. Завести на тестовом сервере учетную запись *deploy* и наделить правами пользования *Docker* и *Docker Compose*:
+
+	```bash
+	adduser --disabled-password --gecos "" deploy
+	usermod -aG docker deploy
+	```
+3. Добавить ключи:
+	1. Локально сгенерировать пару ключей:
+		```bash
+		ssh-keygen -t ed25519 -C "deploy@ci" -f deploy_ci_key
+		```
+	2. Добавить публичный ключ как ключ развертывания на GitHub (*Settings -> Deploy keys*);
+	3. Добавить приватный ключ как ```ACTIONS_SSH_KEY``` в "секреты" репозитория;
+	4. Скопировать публичный ключ на тестовый сервер:
+		```bash
+		su - deploy
+		mkdir -p ~/.ssh && chmod 700 ~/.ssh
+		echo "ssh-ed25519 AAAAC3NzaC1... mail@domen" >> ~/.ssh/authorized_keys
+		chmod 600 ~/.ssh/authorized_keys
+		```
+	5. Добавить IP тестового сервера как ```TEST_HOST``` в "секреты" репозитория;
+	6. Добавить *GitHub Personal Access Token* как ```GHCR_TOKEN``` с правами на чтение, запись и удаление пакетов, а также на чтение кода в "секреты" репозитория.
