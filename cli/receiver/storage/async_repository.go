@@ -60,7 +60,7 @@ func (a *AsyncRepository) Save(m interface{ ToBytes() ([]byte, error) }) error {
 	case a.ch <- m:
 		return nil
 	case <-a.ctx.Done():
-		return fmt.Errorf("async repository closed")
+		return fmt.Errorf("асинхронный репозиторий был закрыт")
 	}
 }
 

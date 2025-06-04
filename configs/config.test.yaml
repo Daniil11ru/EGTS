@@ -10,7 +10,7 @@ storage:
     host: "localhost"
     port: "5432"
     user: "postgres"
-    password: "postgres"
+    password: "123"
     database: "egts"
-    table: "points"
+    table: "point"
     sslmode: disable
