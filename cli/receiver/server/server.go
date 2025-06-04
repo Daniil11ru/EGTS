@@ -21,7 +21,7 @@ const (
 type Server struct {
 	addr  string
 	ttl   time.Duration
-	store *storage.Repository
+	store storage.Saver
 	l     net.Listener
 }
 
@@ -318,7 +318,7 @@ func (s *Server) handleConn(conn net.Conn) {
 	}
 }
 
-func New(srvAddress string, ttl time.Duration, s *storage.Repository) Server {
+func New(srvAddress string, ttl time.Duration, s storage.Saver) Server {
 	return Server{
 		addr:  srvAddress,
 		ttl:   ttl,
