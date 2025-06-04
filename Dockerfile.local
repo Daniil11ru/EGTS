@@ -9,6 +9,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make
 
 FROM busybox
+ENV TZ=Europe/Moscow
 
 COPY --from=egts-builder /app/bin /app/
 COPY --from=egts-builder /app/configs/config.docker.yaml /etc/egts-receviver/config.yaml
