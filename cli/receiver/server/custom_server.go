@@ -16,7 +16,7 @@ type CustomServer struct {
 	Server
 }
 
-func NewCustom(addr string, ttl time.Duration, store *storage.Repository) *CustomServer {
+func NewCustom(addr string, ttl time.Duration, store storage.Saver) *CustomServer {
 	return &CustomServer{Server: New(addr, ttl, store)}
 }
 

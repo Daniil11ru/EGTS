@@ -77,6 +77,9 @@ func main() {
 		defer store.Close()
 	}
 
-	srv := server.NewCustom(cfg.GetListenAddress(), cfg.GetEmptyConnTTL(), storages)
+	asyncRepo := storage.NewAsyncRepository(storages, 1024, 0)
+	defer asyncRepo.Close()
+
+	srv := server.NewCustom(cfg.GetListenAddress(), cfg.GetEmptyConnTTL(), asyncRepo)
 	srv.Run()
 }
