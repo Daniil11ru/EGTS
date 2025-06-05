@@ -2,7 +2,9 @@ package storage
 
 import (
 	"errors"
+	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/mysql"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/nats"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/postgresql"
@@ -10,6 +12,8 @@ import (
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/redis"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/tarantool_queue"
 )
+
+var now = time.Now // For mocking time.Now() in tests
 
 var ErrInvalidStorage = errors.New("storage not found")
 var ErrUnknownStorage = errors.New("storage isn't support yet")
@@ -36,7 +40,9 @@ type Connector interface {
 
 // Repository набор выходных хранилищ
 type Repository struct {
-	storages []Saver
+	storages         []Saver
+	DBSaveMonthStart int
+	DBSaveMonthEnd   int
 }
 
 // AddStore добавляет хранилище для сохранения данных
@@ -46,6 +52,26 @@ func (r *Repository) AddStore(s Saver) {
 
 // Save сохраняет данные во все установленные хранилища
 func (r *Repository) Save(m interface{ ToBytes() ([]byte, error) }) error {
+	currentMonth := now().Month()
+	startMonth := time.Month(r.DBSaveMonthStart)
+	endMonth := time.Month(r.DBSaveMonthEnd)
+
+	saveAllowed := false
+	if startMonth <= endMonth {
+		if currentMonth >= startMonth && currentMonth <= endMonth {
+			saveAllowed = true
+		}
+	} else { // Wraps around year-end (e.g. November to February)
+		if currentMonth >= startMonth || currentMonth <= endMonth {
+			saveAllowed = true
+		}
+	}
+
+	if !saveAllowed {
+		log.Infof("Data not saved. Current month %s is outside the configured range [%s - %s]", currentMonth.String(), startMonth.String(), endMonth.String())
+		return nil
+	}
+
 	for _, store := range r.storages {
 		if err := store.Save(m); err != nil {
 			return err
@@ -89,6 +115,9 @@ func (r *Repository) LoadStorages(storages map[string]map[string]string) error {
 }
 
 // NewRepository создает пустой репозиторий
-func NewRepository() *Repository {
-	return &Repository{}
+func NewRepository(dbSaveMonthStart int, dbSaveMonthEnd int) *Repository {
+	return &Repository{
+		DBSaveMonthStart: dbSaveMonthStart,
+		DBSaveMonthEnd:   dbSaveMonthEnd,
+	}
 }
