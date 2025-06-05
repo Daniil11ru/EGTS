@@ -64,7 +64,7 @@ func main() {
 		log.AddHook(hook)
 	}
 
-	storages := storage.NewRepository()
+	storages := storage.NewRepository(cfg.GetDBSaveMonthStart(), cfg.GetDBSaveMonthEnd())
 	if err := storages.LoadStorages(cfg.Store); err != nil {
 		log.Errorf("Ошибка загрузки хранилища: %v", err)
 
