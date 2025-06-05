@@ -13,7 +13,6 @@ def tails(imei):
         if int(tail) <= LIMIT:
             yield tail
 
-
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--xlsx', required=True)
@@ -50,7 +49,7 @@ def main():
         match = None
         for t in tails(imei):
             cur.execute(
-                "SELECT 1 FROM point WHERE (point->>'client')::bigint = %s LIMIT 1",
+                "SELECT 1 FROM point WHERE point->>'client' = %s LIMIT 1",
                 (t,)
             )
             if cur.fetchone():
@@ -68,7 +67,6 @@ def main():
     out = pd.DataFrame(rows, columns=['IMEI', 'client_tail'])
     print(out.to_string(index=False))
     print(f'Найдено {found_count} из {total} IMEI')
-
 
 if __name__ == '__main__':
     main()
