@@ -4,8 +4,8 @@ conn_ttl: 5
 log_level: "DEBUG"
 log_file_path: "logs/app.log"
 log_max_age_days: 366
-# db_save_month_start: 5  # Month to start saving to DB (1=Jan, 12=Dec), inclusive. Default: 5 (May)
-# db_save_month_end: 9    # Month to end saving to DB (1=Jan, 12=Dec), inclusive. Default: 9 (September)
+# db_save_month_start: 5  # Значение по умолчанию: 5 (Май)
+# db_save_month_end: 9    # Значение по умолчанию: 9 (Сентябрь)
 
 storage:
   postgresql:

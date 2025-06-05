@@ -49,7 +49,7 @@ func TestIntegration(t *testing.T) {
 		return
 	}
 
-	storages := storage.NewRepository()
+	storages := storage.NewRepositoryWithDefaults()
 	err = storages.LoadStorages(conf.Store)
 	if !assert.NoError(t, err) {
 		return

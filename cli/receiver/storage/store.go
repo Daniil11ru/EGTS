@@ -4,53 +4,45 @@ import (
 	"errors"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/mysql"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/nats"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/postgresql"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/rabbitmq"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/redis"
 	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/tarantool_queue"
+	log "github.com/sirupsen/logrus"
 )
 
-var now = time.Now // For mocking time.Now() in tests
+var now = time.Now
 
-var ErrInvalidStorage = errors.New("storage not found")
-var ErrUnknownStorage = errors.New("storage isn't support yet")
+var ErrInvalidStorage = errors.New("хранилище не найдено")
+var ErrUnknownStorage = errors.New("хранилище не поддерживается")
 
 type Store interface {
 	Connector
 	Saver
 }
 
-// Saver интерфейс для подключения внешних хранилищ
 type Saver interface {
-	// Save сохранение в хранилище
 	Save(interface{ ToBytes() ([]byte, error) }) error
 }
 
-// Connector интерфейс для подключения внешних хранилищ
 type Connector interface {
-	// Init установка соединения с хранилищем
 	Init(map[string]string) error
 
-	// Close закрытие соединения с хранилищем
 	Close() error
 }
 
-// Repository набор выходных хранилищ
 type Repository struct {
 	storages         []Saver
 	DBSaveMonthStart int
 	DBSaveMonthEnd   int
 }
 
-// AddStore добавляет хранилище для сохранения данных
 func (r *Repository) AddStore(s Saver) {
 	r.storages = append(r.storages, s)
 }
 
-// Save сохраняет данные во все установленные хранилища
 func (r *Repository) Save(m interface{ ToBytes() ([]byte, error) }) error {
 	currentMonth := now().Month()
 	startMonth := time.Month(r.DBSaveMonthStart)
@@ -61,14 +53,14 @@ func (r *Repository) Save(m interface{ ToBytes() ([]byte, error) }) error {
 		if currentMonth >= startMonth && currentMonth <= endMonth {
 			saveAllowed = true
 		}
-	} else { // Wraps around year-end (e.g. November to February)
+	} else {
 		if currentMonth >= startMonth || currentMonth <= endMonth {
 			saveAllowed = true
 		}
 	}
 
 	if !saveAllowed {
-		log.Infof("Data not saved. Current month %s is outside the configured range [%s - %s]", currentMonth.String(), startMonth.String(), endMonth.String())
+		log.Infof("Данные не сохранены – текущий месяц №%s вне заданного диапазана [%s;%s]", currentMonth.String(), startMonth.String(), endMonth.String())
 		return nil
 	}
 
@@ -80,7 +72,6 @@ func (r *Repository) Save(m interface{ ToBytes() ([]byte, error) }) error {
 	return nil
 }
 
-// LoadStorages загружает хранилища из структуры конфига
 func (r *Repository) LoadStorages(storages map[string]map[string]string) error {
 	if len(storages) == 0 {
 		return ErrInvalidStorage
@@ -114,7 +105,13 @@ func (r *Repository) LoadStorages(storages map[string]map[string]string) error {
 	return nil
 }
 
-// NewRepository создает пустой репозиторий
+func NewRepositoryWithDefaults() *Repository {
+	return &Repository{
+		DBSaveMonthStart: 5,
+		DBSaveMonthEnd:   9,
+	}
+}
+
 func NewRepository(dbSaveMonthStart int, dbSaveMonthEnd int) *Repository {
 	return &Repository{
 		DBSaveMonthStart: dbSaveMonthStart,

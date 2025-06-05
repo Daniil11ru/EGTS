@@ -1,11 +1,12 @@
 package server
 
 import (
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage"
-	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestServer(t *testing.T) {
@@ -25,13 +26,12 @@ func TestServer(t *testing.T) {
 	s := &TestConnector{}
 	_ = s.Init(nil)
 
-	r := storage.NewRepository()
+	r := storage.NewRepositoryWithDefaults()
 	r.AddStore(s)
 
 	srv := New(srvAddr, 3*time.Second, r)
 	defer srv.Stop()
 
-	// запускаем сервер
 	go func() {
 		srv.Run()
 	}()
