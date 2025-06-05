@@ -5,7 +5,7 @@ import sys
 
 LIMIT = 4294967295
 
-def tails(imei):
+def tails(imei: str):
     s = str(imei).strip()
     max_k = min(10, len(s))
     for k in range(max_k, 0, -1):
@@ -58,13 +58,13 @@ def main():
                 break
         rows.append({
             'IMEI': imei,
-            'client_tail': match if match is not None else '',
+            'OID': match if match is not None else '',
         })
 
     print(file=sys.stderr)
     conn.close()
 
-    out = pd.DataFrame(rows, columns=['IMEI', 'client_tail'])
+    out = pd.DataFrame(rows, columns=['IMEI', 'OID'])
     print(out.to_string(index=False))
     print(f'Найдено {found_count} из {total} IMEI')
 
