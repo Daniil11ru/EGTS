@@ -4,8 +4,8 @@ conn_ttl: 5
 log_level: "DEBUG"
 log_file_path: "logs/app.log"
 log_max_age_days: 366
-# db_save_month_start: 5  # Значение по умолчанию: 5 (Май)
-# db_save_month_end: 9    # Значение по умолчанию: 9 (Сентябрь)
+# db_save_month_start: 5
+# db_save_month_end: 9
 
 storage:
   postgresql:
@@ -15,4 +15,5 @@ storage:
     password: "11062001"
     database: "egts"
     table: "point"
+    packet_data_field_name: "packet_data"
     sslmode: require

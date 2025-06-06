@@ -8,7 +8,7 @@ port = "5432"
 user = "postgres"
 password = "postgres"
 database = "receiver"
-table = "points"
+table = "point"
 sslmode = "disable"
 */
 
@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
 )
 
 type Connector struct {
@@ -54,7 +55,15 @@ func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 		return fmt.Errorf("ошибка сериализации пакета: %v", err)
 	}
 
-	insertQuery := fmt.Sprintf("INSERT INTO %s (point) VALUES ($1)", c.config["table"])
+	packetDataFieldName := c.config["packet_data_field_name"]
+	if packetDataFieldName == "" {
+		log.Warnf("Ключ 'telematics_field' не найден в конфигурации хранилища. Используется значение по умолчанию 'packet_data'.")
+		packetDataFieldName = "packet_data"
+	} else {
+		log.Infof("Используется поле '%s' для данных телематики.", packetDataFieldName)
+	}
+
+	insertQuery := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", c.config["table"], packetDataFieldName)
 	if _, err = c.connection.Exec(insertQuery, innerPkg); err != nil {
 		return fmt.Errorf("не удалось вставить запись: %v", err)
 	}

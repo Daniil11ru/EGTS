@@ -1,16 +1,16 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func TestConfigLoad(t *testing.T) {
-	// To prevent log output during tests
 	log.SetOutput(ioutil.Discard)
 
 	cfg := `host: "127.0.0.1"
@@ -50,9 +50,9 @@ storage:
 		assert.Equal(t, Settings{
 			Host:     "127.0.0.1",
 			Port:     "5020",
-			ConnTTl:  10,
+			ConnTTL:  10,
 			LogLevel: "DEBUG",
-			// LogFilePath and LogMaxAgeDays remain as zero values if not in YAML
+
 			Store: map[string]map[string]string{
 				"postgresql": {
 					"host":     "localhost",
@@ -71,8 +71,9 @@ storage:
 					"user":     "guest",
 				},
 			},
-			DBSaveMonthStart: 5, // Default value
-			DBSaveMonthEnd:   9, // Default value
+			DBSaveMonthStart:    5,
+			DBSaveMonthEnd:      9,
+			PacketDataFieldName: "packet_data",
 		},
 			conf,
 		)
@@ -80,7 +81,6 @@ storage:
 }
 
 func TestDBSaveMonthRange(t *testing.T) {
-	// To prevent log output during tests
 	log.SetOutput(ioutil.Discard)
 
 	tests := []struct {
@@ -97,8 +97,8 @@ func TestDBSaveMonthRange(t *testing.T) {
 db_save_month_start: 3
 db_save_month_end: 10
 `,
-			expectedStartMonth: 3,
-			expectedEndMonth:   10,
+			expectedStartMonth:   3,
+			expectedEndMonth:     10,
 			deleteFileAfterwards: true,
 		},
 		{
@@ -106,8 +106,8 @@ db_save_month_end: 10
 			yamlContent: `
 # empty config
 `,
-			expectedStartMonth: 5, // Default May
-			expectedEndMonth:   9, // Default September
+			expectedStartMonth:   5, // Default May
+			expectedEndMonth:     9, // Default September
 			deleteFileAfterwards: true,
 		},
 		{
@@ -116,8 +116,8 @@ db_save_month_end: 10
 db_save_month_start: 0
 db_save_month_end: 13
 `,
-			expectedStartMonth: 5, // Default May (due to validation)
-			expectedEndMonth:   9, // Default September (due to validation)
+			expectedStartMonth:   5, // Default May (due to validation)
+			expectedEndMonth:     9, // Default September (due to validation)
 			deleteFileAfterwards: true,
 		},
 		{
@@ -126,16 +126,16 @@ db_save_month_end: 13
 db_save_month_start: 11
 db_save_month_end: 2
 `,
-			expectedStartMonth: 5, // Default May (due to validation)
-			expectedEndMonth:   9, // Default September (due to validation)
+			expectedStartMonth:   5, // Default May (due to validation)
+			expectedEndMonth:     9, // Default September (due to validation)
 			deleteFileAfterwards: true,
 		},
 		{
 			name:                 "Non-existent config file",
-			yamlContent:          "", // No content, file won't be created for this specific sub-test
-			expectedStartMonth:   0,  // Expect 0 as defaults are not applied if file read fails
-			expectedEndMonth:     0,  // Expect 0 as defaults are not applied if file read fails
-			expectError:          true, // Expect error when loading non-existent file
+			yamlContent:          "",    // No content, file won't be created for this specific sub-test
+			expectedStartMonth:   0,     // Expect 0 as defaults are not applied if file read fails
+			expectedEndMonth:     0,     // Expect 0 as defaults are not applied if file read fails
+			expectError:          true,  // Expect error when loading non-existent file
 			deleteFileAfterwards: false, // No file to delete
 		},
 	}
@@ -156,7 +156,9 @@ db_save_month_end: 2
 					_, err = file.WriteString(tt.yamlContent)
 					if !assert.NoError(t, err, "Failed to write to temp file for test: %s", tt.name) {
 						file.Close()
-						if tt.deleteFileAfterwards { os.Remove(confPath) }
+						if tt.deleteFileAfterwards {
+							os.Remove(confPath)
+						}
 						return
 					}
 				}
@@ -164,7 +166,6 @@ db_save_month_end: 2
 			} else if tt.name == "Non-existent config file" {
 				confPath = "/tmp/non_existent_config_for_test.yaml" // A path that should not exist
 			}
-
 
 			cfg, err := New(confPath)
 
