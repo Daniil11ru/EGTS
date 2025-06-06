@@ -45,7 +45,7 @@ def main():
     for idx, imei in enumerate(imeis, start=1):
         filled_len = int(bar_len * idx / total)
         bar = '#' * filled_len + '-' * (bar_len - filled_len)
-        print(f'\rProgress: |{bar}| {idx}/{total}', file=sys.stderr, end='', flush=True)
+        print(f'\rПрогрес: |{bar}| {idx}/{total}', file=sys.stderr, end='', flush=True)
         match = None
         for t in tails(imei):
             cur.execute(
