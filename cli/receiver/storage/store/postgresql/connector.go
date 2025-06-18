@@ -1,7 +1,7 @@
 package postgresql
 
 /*
-Настройки, которые могут (а не которые – должны) быть в конфиге для подключения хранилища:
+Настройки, которые могут (а некоторые – должны) быть в конфиге для подключения хранилища:
 
 host = "localhost"
 port = "5432"
@@ -57,13 +57,19 @@ func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 
 	packetDataFieldName := c.config["packet_data_field_name"]
 	if packetDataFieldName == "" {
-		log.Warnf("Ключ 'telematics_field' не найден в конфигурации хранилища. Используется значение по умолчанию 'packet_data'.")
-		packetDataFieldName = "packet_data"
+		log.Warnf("Ключ 'telematics_field' не найден в конфигурации хранилища. Используется значение по умолчанию 'data'.")
+		packetDataFieldName = "data"
 	} else {
-		log.Infof("Используется поле '%s' для данных телематики.", packetDataFieldName)
+		log.Infof("Используется поле '%s' для хранения телематических данных.", packetDataFieldName)
 	}
 
-	insertQuery := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", c.config["table"], packetDataFieldName)
+	vehicleMovementTableName := c.config["vehicle_movement_table_name"]
+	if vehicleMovementTableName == "" {
+		log.Warnf("Ключ 'vehicle_movement_table_name' не найдет в конфигурации хранилища. Используется значение по умолчению 'vehicle_movement'.")
+		vehicleMovementTableName = "vehicle_movement_table_name"
+	}
+
+	insertQuery := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", vehicleMovementTableName, packetDataFieldName)
 	if _, err = c.connection.Exec(insertQuery, innerPkg); err != nil {
 		return fmt.Errorf("не удалось вставить запись: %v", err)
 	}

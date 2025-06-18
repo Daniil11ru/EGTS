@@ -9,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// AsyncRepository wraps Repository and performs saving in background workers.
 type AsyncRepository struct {
 	repo   *Repository
 	ch     chan interface{ ToBytes() ([]byte, error) }
@@ -18,7 +17,6 @@ type AsyncRepository struct {
 	cancel context.CancelFunc
 }
 
-// NewAsyncRepository creates asynchronous repository with given buffer and workers count.
 func NewAsyncRepository(repo *Repository, buffer, workers int) *AsyncRepository {
 	if workers <= 0 {
 		workers = runtime.NumCPU()
@@ -54,7 +52,6 @@ func (a *AsyncRepository) worker() {
 	}
 }
 
-// Save places message into queue for asynchronous saving.
 func (a *AsyncRepository) Save(m interface{ ToBytes() ([]byte, error) }) error {
 	select {
 	case a.ch <- m:
@@ -64,7 +61,6 @@ func (a *AsyncRepository) Save(m interface{ ToBytes() ([]byte, error) }) error {
 	}
 }
 
-// Close stops workers and waits for completion.
 func (a *AsyncRepository) Close() {
 	a.cancel()
 	close(a.ch)
