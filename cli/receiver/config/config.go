@@ -1,9 +1,5 @@
 package config
 
-/*
-Описание конфигурационного файла
-*/
-
 import (
 	"os"
 	"time"
@@ -67,10 +63,10 @@ func New(confPath string) (Settings, error) {
 	}
 
 	if c.DBSaveMonthStart == 0 {
-		c.DBSaveMonthStart = 5 // Default to May
+		c.DBSaveMonthStart = 5 // Май
 	}
 	if c.DBSaveMonthEnd == 0 {
-		c.DBSaveMonthEnd = 9 // Default to September
+		c.DBSaveMonthEnd = 9 // Сентябрь
 	}
 
 	if c.DBSaveMonthStart < 1 || c.DBSaveMonthStart > 12 || c.DBSaveMonthEnd < 1 || c.DBSaveMonthEnd > 12 {
