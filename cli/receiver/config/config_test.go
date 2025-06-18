@@ -13,7 +13,8 @@ import (
 func TestConfigLoad(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 
-	cfg := `host: "127.0.0.1"
+	cfg := `
+host: "127.0.0.1"
 port: "5020"
 conn_ttl: 10
 log_level: "DEBUG"
@@ -31,7 +32,8 @@ storage:
     user: "postgres"
     password: "postgres"
     database: "receiver"
-    table: "points"
+    vehicle_movement_table: "vehicle_movement"
+	packet_data_field: "data"
     sslmode: "disable"
 `
 
@@ -55,13 +57,14 @@ storage:
 
 			Store: map[string]map[string]string{
 				"postgresql": {
-					"host":     "localhost",
-					"port":     "5432",
-					"user":     "postgres",
-					"password": "postgres",
-					"database": "receiver",
-					"table":    "points",
-					"sslmode":  "disable",
+					"host":                   "localhost",
+					"port":                   "5432",
+					"user":                   "postgres",
+					"password":               "postgres",
+					"database":               "receiver",
+					"vehicle_movement_table": "vehicle_movement",
+					"packet_data_field":      "data",
+					"sslmode":                "disable",
 				},
 				"rabbitmq": {
 					"exchange": "receiver",
@@ -71,9 +74,8 @@ storage:
 					"user":     "guest",
 				},
 			},
-			DBSaveMonthStart:    5,
-			DBSaveMonthEnd:      9,
-			PacketDataFieldName: "packet_data",
+			DBSaveMonthStart: 5,
+			DBSaveMonthEnd:   9,
 		},
 			conf,
 		)

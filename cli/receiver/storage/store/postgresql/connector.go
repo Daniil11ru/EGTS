@@ -55,18 +55,18 @@ func (c *Connector) Save(msg interface{ ToBytes() ([]byte, error) }) error {
 		return fmt.Errorf("ошибка сериализации пакета: %v", err)
 	}
 
-	packetDataFieldName := c.config["packet_data_field_name"]
+	packetDataFieldName := c.config["packet_data_field"]
 	if packetDataFieldName == "" {
-		log.Warnf("Ключ 'telematics_field' не найден в конфигурации хранилища. Используется значение по умолчанию 'data'.")
+		log.Warnf("Ключ 'packet_data_field' не найден в конфигурации хранилища. Используется значение по умолчанию 'data'.")
 		packetDataFieldName = "data"
 	} else {
 		log.Infof("Используется поле '%s' для хранения телематических данных.", packetDataFieldName)
 	}
 
-	vehicleMovementTableName := c.config["vehicle_movement_table_name"]
+	vehicleMovementTableName := c.config["vehicle_movement_table"]
 	if vehicleMovementTableName == "" {
-		log.Warnf("Ключ 'vehicle_movement_table_name' не найдет в конфигурации хранилища. Используется значение по умолчению 'vehicle_movement'.")
-		vehicleMovementTableName = "vehicle_movement_table_name"
+		log.Warnf("Ключ 'vehicle_movement_table' не найдет в конфигурации хранилища. Используется значение по умолчению 'vehicle_movement'.")
+		vehicleMovementTableName = "vehicle_movement_table"
 	}
 
 	insertQuery := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", vehicleMovementTableName, packetDataFieldName)
