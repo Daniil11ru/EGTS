@@ -5,19 +5,22 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"regexp"
 	"time"
 
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage"
-	"github.com/kuznetsovin/egts-protocol/libs/egts"
+	"github.com/daniil11ru/egts/cli/receiver/domain"
+	packet "github.com/daniil11ru/egts/cli/receiver/repository/movement/util"
+	"github.com/daniil11ru/egts/libs/egts"
 	log "github.com/sirupsen/logrus"
 )
 
 type CustomServer struct {
 	Server
+	GetIPWhiteList domain.GetIPWhiteList
 }
 
-func NewCustom(addr string, ttl time.Duration, store storage.Saver) *CustomServer {
-	return &CustomServer{Server: New(addr, ttl, store)}
+func NewCustom(addr string, ttl time.Duration, savePackage *domain.SavePackage, getIPWhiteList domain.GetIPWhiteList) *CustomServer {
+	return &CustomServer{Server: New(addr, ttl, savePackage), GetIPWhiteList: getIPWhiteList}
 }
 
 func (server *CustomServer) Run() {
@@ -31,8 +34,36 @@ func (server *CustomServer) Run() {
 	log.WithField("addr", server.addr).Info("Запущен сервер")
 	log.Debug("TTL: ", server.ttl)
 
+	whiteList, err := server.GetIPWhiteList.Run()
+	if err != nil || len(whiteList) == 0 {
+		log.Error("Не удалось получить белый список IP")
+		return
+	}
+	log.Debug("Белый список IP: ", whiteList)
+
 	for {
 		conn, err := server.l.Accept()
+
+		var re = regexp.MustCompile(`^((?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}):(\d{1,5})$`)
+		matches := re.FindStringSubmatch(conn.RemoteAddr().String())
+		if matches == nil {
+			log.Warn("Адрес отправителя не является IP-адресом!")
+			continue
+		}
+		IP := matches[1]
+
+		isInWhiteList := false
+		for i := 0; i < len(whiteList); i++ {
+			if whiteList[i] == IP {
+				isInWhiteList = true
+				break
+			}
+		}
+		if !isInWhiteList {
+			log.Warnf("IP %s не находится в белом списке", conn.RemoteAddr().String())
+			continue
+		}
+
 		if err != nil {
 			log.WithField("err", err).Error("Ошибка соединения")
 			continue
@@ -44,11 +75,6 @@ func (server *CustomServer) Run() {
 
 func (s *CustomServer) handleConn(conn net.Conn) {
 	defer conn.Close()
-
-	if s.store == nil {
-		log.Error("Некорректная ссылка на объект хранилища")
-		return
-	}
 
 	log.WithField("ip", conn.RemoteAddr()).Info("Установлено соединение")
 
@@ -156,7 +182,7 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 	)
 
 	for _, rec := range *pkg.ServicesFrameData.(*egts.ServiceDataSet) {
-		exportPacket := storage.NavRecord{
+		exportPacket := packet.NavRecord{
 			PacketID: uint32(pkg.PacketIdentifier),
 		}
 
@@ -245,9 +271,7 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 
 		exportPacket.Client = client
 		if isPkgSave && recStatus == egtsPcOk {
-			if err := s.store.Save(&exportPacket); err != nil {
-				log.WithField("err", err).Error("Ошибка сохранения телеметрии")
-			}
+			s.savePackage.Run(&exportPacket, conn.RemoteAddr().String())
 		}
 	}
 

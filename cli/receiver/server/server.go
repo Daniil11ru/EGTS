@@ -6,8 +6,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage"
-	"github.com/kuznetsovin/egts-protocol/libs/egts"
+	domain "github.com/daniil11ru/egts/cli/receiver/domain"
+	packet "github.com/daniil11ru/egts/cli/receiver/repository/movement/util"
+	"github.com/daniil11ru/egts/libs/egts"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,10 +20,10 @@ const (
 )
 
 type Server struct {
-	addr  string
-	ttl   time.Duration
-	store storage.Saver
-	l     net.Listener
+	addr        string
+	ttl         time.Duration
+	savePackage *domain.SavePackage
+	l           net.Listener
 }
 
 func (s *Server) Run() {
@@ -65,10 +66,6 @@ func (s *Server) handleConn(conn net.Conn) {
 		client            uint32
 	)
 
-	if s.store == nil {
-		log.Error("Некорректная ссылка на объект хранилища")
-		return
-	}
 	log.WithField("ip", conn.RemoteAddr()).Info("Установлено соединение")
 
 	log.Debug("TTL: ", s.ttl)
@@ -159,7 +156,7 @@ func (s *Server) handleConn(conn net.Conn) {
 			log.Debug("Тип пакета EGTS_PT_APPDATA")
 
 			for _, rec := range *pkg.ServicesFrameData.(*egts.ServiceDataSet) {
-				exportPacket := storage.NavRecord{
+				exportPacket := packet.NavRecord{
 					PacketID: uint32(pkg.PacketIdentifier),
 				}
 
@@ -222,34 +219,34 @@ func (s *Server) handleConn(conn net.Conn) {
 					case *egts.SrAdSensorsData:
 						log.Debug("Разбор подзаписи EGTS_SR_AD_SENSORS_DATA")
 						if subRecData.AnalogSensorFieldExists1 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 1, Value: subRecData.AnalogSensor1})
+							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 1, Value: subRecData.AnalogSensor1})
 						}
 
 						if subRecData.AnalogSensorFieldExists2 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 2, Value: subRecData.AnalogSensor2})
+							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 2, Value: subRecData.AnalogSensor2})
 						}
 
 						if subRecData.AnalogSensorFieldExists3 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 3, Value: subRecData.AnalogSensor3})
+							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 3, Value: subRecData.AnalogSensor3})
 						}
 						if subRecData.AnalogSensorFieldExists4 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 4, Value: subRecData.AnalogSensor4})
+							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 4, Value: subRecData.AnalogSensor4})
 						}
 						if subRecData.AnalogSensorFieldExists5 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 5, Value: subRecData.AnalogSensor5})
+							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 5, Value: subRecData.AnalogSensor5})
 						}
 						if subRecData.AnalogSensorFieldExists6 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 6, Value: subRecData.AnalogSensor6})
+							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 6, Value: subRecData.AnalogSensor6})
 						}
 						if subRecData.AnalogSensorFieldExists7 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 7, Value: subRecData.AnalogSensor7})
+							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 7, Value: subRecData.AnalogSensor7})
 						}
 						if subRecData.AnalogSensorFieldExists8 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: 8, Value: subRecData.AnalogSensor8})
+							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 8, Value: subRecData.AnalogSensor8})
 						}
 					case *egts.SrAbsAnSensData:
 						log.Debug("Разбор подзаписи EGTS_SR_ABS_AN_SENS_DATA")
-						exportPacket.AnSensors = append(exportPacket.AnSensors, storage.AnSensor{SensorNumber: subRecData.SensorNumber, Value: subRecData.Value})
+						exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: subRecData.SensorNumber, Value: subRecData.Value})
 
 					case *egts.SrAbsCntrData:
 						log.Debug("Разбор подзаписи EGTS_SR_ABS_CNTR_DATA")
@@ -274,7 +271,7 @@ func (s *Server) handleConn(conn net.Conn) {
 						}
 					case *egts.SrLiquidLevelSensor:
 						log.Debug("Разбор подзаписи EGTS_SR_LIQUID_LEVEL_SENSOR")
-						sensorData := storage.LiquidSensor{
+						sensorData := packet.LiquidSensor{
 							SensorNumber: subRecData.LiquidLevelSensorNumber,
 							ErrorFlag:    subRecData.LiquidLevelSensorErrorFlag,
 						}
@@ -292,9 +289,7 @@ func (s *Server) handleConn(conn net.Conn) {
 
 				exportPacket.Client = client
 				if isPkgSave {
-					if err := s.store.Save(&exportPacket); err != nil {
-						log.WithField("err", err).Error("Ошибка сохранения телеметрии")
-					}
+					s.savePackage.Run(&exportPacket, conn.RemoteAddr().String())
 				}
 			}
 
@@ -318,11 +313,11 @@ func (s *Server) handleConn(conn net.Conn) {
 	}
 }
 
-func New(srvAddress string, ttl time.Duration, s storage.Saver) Server {
+func New(srvAddress string, ttl time.Duration, savePackage *domain.SavePackage) Server {
 	return Server{
-		addr:  srvAddress,
-		ttl:   ttl,
-		store: s,
+		addr:        srvAddress,
+		ttl:         ttl,
+		savePackage: savePackage,
 	}
 }
 

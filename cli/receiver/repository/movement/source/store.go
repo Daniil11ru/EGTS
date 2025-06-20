@@ -1,15 +1,12 @@
-package storage
+package source
 
 import (
 	"errors"
 	"time"
 
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/mysql"
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/nats"
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/postgresql"
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/rabbitmq"
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/redis"
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage/store/tarantool_queue"
+	connector "github.com/daniil11ru/egts/cli/receiver/connector"
+	pgconnector "github.com/daniil11ru/egts/cli/receiver/connector/postgresql"
+	pgsaver "github.com/daniil11ru/egts/cli/receiver/repository/movement/source/postgresql"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,18 +16,12 @@ var ErrInvalidStorage = errors.New("хранилище не найдено")
 var ErrUnknownStorage = errors.New("хранилище не поддерживается")
 
 type Store interface {
-	Connector
+	connector.Connector
 	Saver
 }
 
 type Saver interface {
-	Save(interface{ ToBytes() ([]byte, error) }) error
-}
-
-type Connector interface {
-	Init(map[string]string) error
-
-	Close() error
+	Save(message interface{ ToBytes() ([]byte, error) }, vehicleID int) error
 }
 
 type Repository struct {
@@ -43,7 +34,7 @@ func (r *Repository) AddStore(s Saver) {
 	r.storages = append(r.storages, s)
 }
 
-func (r *Repository) Save(m interface{ ToBytes() ([]byte, error) }) error {
+func (r *Repository) Save(m interface{ ToBytes() ([]byte, error) }, vehicleID int) error {
 	currentMonth := now().Month()
 	startMonth := time.Month(r.DBSaveMonthStart)
 	endMonth := time.Month(r.DBSaveMonthEnd)
@@ -60,12 +51,12 @@ func (r *Repository) Save(m interface{ ToBytes() ([]byte, error) }) error {
 	}
 
 	if !saveAllowed {
-		log.Infof("Данные не сохранены – текущий месяц №%s вне заданного диапазана [%s;%s]", currentMonth.String(), startMonth.String(), endMonth.String())
+		log.Infof("Данные не сохранены – текущий месяц №%s вне заданного диапазона [%s;%s]", currentMonth.String(), startMonth.String(), endMonth.String())
 		return nil
 	}
 
 	for _, store := range r.storages {
-		if err := store.Save(m); err != nil {
+		if err := store.Save(m, vehicleID); err != nil {
 			return err
 		}
 	}
@@ -77,30 +68,23 @@ func (r *Repository) LoadStorages(storages map[string]map[string]string) error {
 		return ErrInvalidStorage
 	}
 
-	var db Store
+	var connector connector.Connector
+	var saver Saver
 	for store, params := range storages {
 		switch store {
-		case "rabbitmq":
-			db = &rabbitmq.Connector{}
 		case "postgresql":
-			db = &postgresql.Connector{}
-		case "nats":
-			db = &nats.Connector{}
-		case "tarantool_queue":
-			db = &tarantool_queue.Connector{}
-		case "redis":
-			db = &redis.Connector{}
-		case "mysql":
-			db = &mysql.Connector{}
+			connector = &pgconnector.Connector{}
+			connector.Connect(storages["postgresql"])
+			saver, _ = pgsaver.NewSaver(connector, params)
 		default:
 			return ErrUnknownStorage
 		}
 
-		if err := db.Init(params); err != nil {
+		if err := connector.Connect(params); err != nil {
 			return err
 		}
 
-		r.AddStore(db)
+		r.AddStore(saver)
 	}
 	return nil
 }

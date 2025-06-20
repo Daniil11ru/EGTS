@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/kuznetsovin/egts-protocol/libs/egts"
+	"github.com/daniil11ru/egts/libs/egts"
 )
 
 /*

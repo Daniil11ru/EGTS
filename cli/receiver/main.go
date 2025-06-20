@@ -5,9 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/config"
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/server"
-	"github.com/kuznetsovin/egts-protocol/cli/receiver/storage"
+	"github.com/daniil11ru/egts/cli/receiver/config"
+	pgconnector "github.com/daniil11ru/egts/cli/receiver/connector/postgresql"
+	"github.com/daniil11ru/egts/cli/receiver/domain"
+	aux "github.com/daniil11ru/egts/cli/receiver/repository/auxiliary"
+	mov "github.com/daniil11ru/egts/cli/receiver/repository/movement"
+	"github.com/daniil11ru/egts/cli/receiver/repository/movement/source"
+	"github.com/daniil11ru/egts/cli/receiver/server"
+	auxsrc "github.com/daniil11ru/egts/cli/receiver/source/auxiliary/postgresql"
 
 	"github.com/rifflock/lfshook"
 	log "github.com/sirupsen/logrus"
@@ -64,22 +69,26 @@ func main() {
 		log.AddHook(hook)
 	}
 
-	storages := storage.NewRepository(cfg.GetDBSaveMonthStart(), cfg.GetDBSaveMonthEnd())
-	if err := storages.LoadStorages(cfg.Store); err != nil {
+	telematicsDataStorages := source.NewRepository(cfg.GetDBSaveMonthStart(), cfg.GetDBSaveMonthEnd())
+	if err := telematicsDataStorages.LoadStorages(cfg.Store); err != nil {
 		log.Errorf("Ошибка загрузки хранилища: %v", err)
-
-		store := storage.LogConnector{}
-		if err := store.Init(nil); err != nil {
-			log.Fatal(err)
-		}
-
-		storages.AddStore(store)
-		defer store.Close()
 	}
+	vehicleMovementRepository := mov.NewVehicleMovementRepository(telematicsDataStorages, 1024, 0)
 
-	asyncRepo := storage.NewAsyncRepository(storages, 1024, 0)
-	defer asyncRepo.Close()
+	connector := pgconnector.Connector{}
+	connector.Connect(cfg.Store["postgresql"])
 
-	srv := server.NewCustom(cfg.GetListenAddress(), cfg.GetEmptyConnTTL(), asyncRepo)
+	auxInfoSource := auxsrc.PostgresAuxSource{}
+	auxInfoSource.Initialize(&connector)
+	auxInfoRepository := aux.AuxiliaryInformationRepository{Source: &auxInfoSource}
+
+	savePacket := domain.SavePackage{VehicleMovementRepository: vehicleMovementRepository, AuxiliaryInformationRepository: auxInfoRepository}
+
+	getIPWhiteList := domain.GetIPWhiteList{AuxiliaryInformationRepository: auxInfoRepository}
+
+	defer connector.Close()
+	defer vehicleMovementRepository.Close()
+
+	srv := server.NewCustom(cfg.GetListenAddress(), cfg.GetEmptyConnTTL(), &savePacket, getIPWhiteList)
 	srv.Run()
 }
