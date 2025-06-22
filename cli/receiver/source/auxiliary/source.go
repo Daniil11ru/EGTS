@@ -1,12 +1,15 @@
 package auxiliary
 
 import (
+	"database/sql"
+
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
 )
 
 type Vehicle struct {
 	ID                 int
 	IMEI               int64
+	OID                sql.NullInt64
 	LicensePlateNumber string
 	DirectoryID        int
 }
@@ -28,5 +31,6 @@ type AuxiliaryInformationSource interface {
 	GetAllDirectories() ([]VehicleDirectory, error)
 	GetAllProviders() ([]Provider, error)
 	GetVehiclesByProviderIP(ip string) ([]Vehicle, error)
+	GetVehicleByOID(OID int32) (Vehicle, error)
 	GetAllIPs() ([]string, error)
 }

@@ -34,7 +34,7 @@ func (p *PostgresAuxSource) GetAllVehicles() ([]aux.Vehicle, error) {
 		return nil, err
 	}
 
-	const q = "SELECT id, imei, license_plate_number, vehicle_directory_id FROM vehicle"
+	const q = "SELECT id, imei, oid, license_plate_number, vehicle_directory_id FROM vehicle"
 	rows, err := db.Query(q)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (p *PostgresAuxSource) GetAllVehicles() ([]aux.Vehicle, error) {
 	var vehicles []aux.Vehicle
 	for rows.Next() {
 		var v aux.Vehicle
-		if err := rows.Scan(&v.ID, &v.IMEI, &v.LicensePlateNumber, &v.DirectoryID); err != nil {
+		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.DirectoryID); err != nil {
 			return nil, err
 		}
 		vehicles = append(vehicles, v)
@@ -127,6 +127,7 @@ func (p *PostgresAuxSource) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, e
 	const q = `
 		SELECT v.id,
 		       v.imei,
+			   v.oid,
 		       v.license_plate_number,
 		       v.vehicle_directory_id
 		FROM vehicle v
@@ -143,7 +144,7 @@ func (p *PostgresAuxSource) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, e
 	var vehicles []aux.Vehicle
 	for rows.Next() {
 		var v aux.Vehicle
-		if err := rows.Scan(&v.ID, &v.IMEI, &v.LicensePlateNumber, &v.DirectoryID); err != nil {
+		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.DirectoryID); err != nil {
 			return nil, err
 		}
 		vehicles = append(vehicles, v)
@@ -152,6 +153,54 @@ func (p *PostgresAuxSource) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, e
 		return nil, err
 	}
 	return vehicles, nil
+}
+
+func (p *PostgresAuxSource) GetVehicleByOID(oid int32) (aux.Vehicle, error) {
+	db, err := p.db()
+	if err != nil {
+		return aux.Vehicle{}, err
+	}
+
+	const q = `
+        SELECT id, imei, oid, license_plate_number, vehicle_directory_id
+        FROM vehicle
+        WHERE oid = $1
+    `
+	rows, err := db.Query(q, oid)
+	if err != nil {
+		return aux.Vehicle{}, err
+	}
+	defer rows.Close()
+
+	var (
+		v     aux.Vehicle
+		count int
+	)
+	for rows.Next() {
+		var tmp aux.Vehicle
+		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.DirectoryID); err != nil {
+			return aux.Vehicle{}, err
+		}
+		if count == 0 {
+			v = tmp
+		}
+		count++
+		if count > 1 {
+			break
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return aux.Vehicle{}, err
+	}
+
+	switch count {
+	case 0:
+		return aux.Vehicle{}, fmt.Errorf("транспорт с OID %d не найден", oid)
+	case 1:
+		return v, nil
+	default:
+		return aux.Vehicle{}, fmt.Errorf("найдено множество транспортных единиц с OID %d", oid)
+	}
 }
 
 func (p *PostgresAuxSource) GetAllIPs() ([]string, error) {

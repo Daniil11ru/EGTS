@@ -92,7 +92,7 @@ func isPartOf(a, b uint64) bool {
 	return false
 }
 
-func (domain *SavePackage) getVehicleIDFromOID(OID uint32, vehicles []source.Vehicle) (int, error) {
+func (domain *SavePackage) getVehicleIDByOID(OID uint32, vehicles []source.Vehicle) (int, error) {
 	isFound := false
 	id := -1
 
@@ -112,21 +112,31 @@ func (domain *SavePackage) getVehicleIDFromOID(OID uint32, vehicles []source.Veh
 	return id, fmt.Errorf("не удалось определить IMEI")
 }
 
+func (domain *SavePackage) getVehicleIDByOIDFromStorage(OID int32) (int, error) {
+	vehicle, err := domain.AuxiliaryInformationRepository.GetVehicleByOID(int32(OID))
+	return vehicle.ID, err
+}
+
 func (domain *SavePackage) Run(data *packet.NavRecord, providerIP string) error {
 	var err error
 	OID := data.Client
 	vehicleID, OK := domain.OIDToVehicleID[int(OID)]
 	if !OK {
-		vehicles, _ := domain.AuxiliaryInformationRepository.GetVehiclesByProviderIP(providerIP)
-		vehicleID, err = domain.getVehicleIDFromOID(OID, vehicles)
+		vehicleID, err = domain.getVehicleIDByOIDFromStorage(int32(OID))
+		if err != nil {
+			vehicles, _ := domain.AuxiliaryInformationRepository.GetVehiclesByProviderIP(providerIP)
+			vehicleID, err = domain.getVehicleIDByOID(OID, vehicles)
+		}
 	}
 
-	if vehicleID >= 0 {
+	if vehicleID >= 0 && err == nil {
 		domain.VehicleMovementRepository.Save(data, vehicleID)
-		domain.OIDToVehicleID[int(OID)] = vehicleID
+		if !OK {
+			domain.OIDToVehicleID[int(OID)] = vehicleID
+		}
 	} else {
 		log.Warnf("Не удалось найти машину по OID %d, телематические данные не были записаны", OID)
 	}
 
-	return err
+	return fmt.Errorf("не удалось найти машину по OID %d, телематические данные не были записаны", OID)
 }

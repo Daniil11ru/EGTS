@@ -19,3 +19,7 @@ func (auxInfoRepo *AuxiliaryInformationRepository) GetAllDirectories() ([]aux.Ve
 func (auxInfoRepo *AuxiliaryInformationRepository) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, error) {
 	return auxInfoRepo.Source.GetVehiclesByProviderIP(ip)
 }
+
+func (auxInfoRepo *AuxiliaryInformationRepository) GetVehicleByOID(OID int32) (aux.Vehicle, error) {
+	return auxInfoRepo.Source.GetVehicleByOID(OID)
+}
