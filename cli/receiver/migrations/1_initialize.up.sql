@@ -22,16 +22,6 @@ DROP TABLE IF EXISTS "public"."vehicle";
 -- Sequence and defined type
 CREATE SEQUENCE IF NOT EXISTS vehicle_id_seq;
 
--- Table Definition
-CREATE TABLE "public"."vehicle" (
-    "imei" int8 NOT NULL,
-    "license_plate_number" varchar(8),
-    "vehicle_directory_id" int4 NOT NULL,
-    "id" int4 NOT NULL DEFAULT nextval('vehicle_id_seq'::regclass),
-    CONSTRAINT "alllowed_vehicle_vehicle_directory_metadata_id_fkey" FOREIGN KEY ("vehicle_directory_id") REFERENCES "public"."vehicle_directory"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    PRIMARY KEY ("id")
-);
-
 DROP TABLE IF EXISTS "public"."vehicle_directory";
 -- Sequence and defined type
 CREATE SEQUENCE IF NOT EXISTS vehicle_directory_metadata_id_seq;
@@ -51,6 +41,15 @@ CREATE TABLE "public"."vehicle_directory" (
     PRIMARY KEY ("id")
 );
 
+-- Table Definition
+CREATE TABLE "public"."vehicle" (
+    "imei" int8 NOT NULL,
+    "license_plate_number" varchar(8),
+    "vehicle_directory_id" int4 NOT NULL,
+    "id" int4 NOT NULL DEFAULT nextval('vehicle_id_seq'::regclass),
+    CONSTRAINT "alllowed_vehicle_vehicle_directory_metadata_id_fkey" FOREIGN KEY ("vehicle_directory_id") REFERENCES "public"."vehicle_directory"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY ("id")
+);
 
 -- Indices
 CREATE UNIQUE INDEX vehicle_directory_metadata_pkey ON public.vehicle_directory USING btree (id);
