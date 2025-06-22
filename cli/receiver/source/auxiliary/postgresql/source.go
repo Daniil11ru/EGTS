@@ -61,7 +61,7 @@ func (p *PostgresAuxSource) GetAllDirectories() ([]aux.VehicleDirectory, error) 
 		return nil, err
 	}
 
-	const q = "SELECT id, provider_id, imei_extraction_unit_type, imei_extraction_position_type, segment_length FROM vehicle_directory"
+	const q = "SELECT id, provider_id FROM vehicle_directory"
 	rows, err := db.Query(q)
 	if err != nil {
 		return nil, err
@@ -71,12 +71,9 @@ func (p *PostgresAuxSource) GetAllDirectories() ([]aux.VehicleDirectory, error) 
 	var dirs []aux.VehicleDirectory
 	for rows.Next() {
 		var d aux.VehicleDirectory
-		var unitType, posType byte
-		if err := rows.Scan(&d.ID, &d.ProviderID, &unitType, &posType, &d.SegmentLength); err != nil {
+		if err := rows.Scan(&d.ID, &d.ProviderID); err != nil {
 			return nil, err
 		}
-		d.ExtractionUnitType = aux.ExtractionUnitType(unitType)
-		d.ExtractionPositionType = aux.ExtractionPositionType(posType)
 		dirs = append(dirs, d)
 	}
 	if err := rows.Err(); err != nil {

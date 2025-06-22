@@ -271,7 +271,7 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 
 		exportPacket.Client = client
 		if isPkgSave && recStatus == egtsPcOk {
-			s.savePackage.Run(&exportPacket, conn.RemoteAddr().String())
+			return s.savePackage.Run(&exportPacket, conn.RemoteAddr().String())
 		}
 	}
 

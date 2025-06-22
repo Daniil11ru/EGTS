@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"math/bits"
 
 	aux "github.com/daniil11ru/egts/cli/receiver/repository/auxiliary"
@@ -79,59 +80,45 @@ func byteCount(n uint64) int {
 	return (bits.Len64(n) + 7) / 8
 }
 
-func (domain *SavePackage) getVehicleIDFromOID(OID uint32, vehicles []source.Vehicle) int {
+func isPartOf(a, b uint64) bool {
+	byteCount := byteCount(a)
+	digitCount := digitCount(a)
+
+	if isSuffixBytes(a, b, byteCount) || isPrefixBytes(a, b, byteCount) ||
+		isSuffixDigits(a, b, digitCount) || isPrefixDigits(a, b, digitCount) {
+		return true
+	}
+
+	return false
+}
+
+func (domain *SavePackage) getVehicleIDFromOID(OID uint32, vehicles []source.Vehicle) (int, error) {
+	isFound := false
+	id := -1
+
 	for _, v := range vehicles {
-		directory := domain.IDToVehicleDirectory[v.DirectoryID]
 		IMEI := v.IMEI
 
-		var segmentLength int16
-
-		if directory.SegmentLength.Valid {
-			segmentLength = directory.SegmentLength.Int16
-		} else {
-			segmentLength = 0
-		}
-
-		var unitCount uint8
-
-		if segmentLength != 0 {
-			unitCount = uint8(segmentLength)
-		} else {
-			if directory.ExtractionUnitType == source.ExtractionUnitTypeBytes {
-				unitCount = uint8(byteCount(uint64(OID)))
-			} else if directory.ExtractionUnitType == source.ExtractionUnitTypeDigits {
-				unitCount = uint8(digitCount(uint64(OID)))
-			}
-		}
-
-		if directory.ExtractionUnitType == source.ExtractionUnitTypeBytes && directory.ExtractionPositionType == source.ExtractionPositionTypePrefix {
-			if isPrefixBytes(uint64(OID), uint64(IMEI), int(unitCount)) {
-				return v.ID
-			}
-		} else if directory.ExtractionUnitType == source.ExtractionUnitTypeBytes && directory.ExtractionPositionType == source.ExtractionPositionTypeSuffix {
-			if isSuffixBytes(uint64(OID), uint64(IMEI), int(unitCount)) {
-				return v.ID
-			}
-		} else if directory.ExtractionUnitType == source.ExtractionUnitTypeDigits && directory.ExtractionPositionType == source.ExtractionPositionTypePrefix {
-			if isPrefixDigits(uint64(OID), uint64(IMEI), int(unitCount)) {
-				return v.ID
-			}
-		} else if directory.ExtractionUnitType == source.ExtractionUnitTypeDigits && directory.ExtractionPositionType == source.ExtractionPositionTypeSuffix {
-			if isSuffixDigits(uint64(OID), uint64(IMEI), int(unitCount)) {
-				return v.ID
+		if isPartOf(uint64(OID), uint64(IMEI)) {
+			if !isFound {
+				id = v.ID
+			} else {
+				id = -1
+				return id, fmt.Errorf("не удалось однозначно определить IMEI")
 			}
 		}
 	}
 
-	return -1
+	return id, fmt.Errorf("не удалось определить IMEI")
 }
 
-func (domain *SavePackage) Run(data *packet.NavRecord, providerIP string) {
+func (domain *SavePackage) Run(data *packet.NavRecord, providerIP string) error {
+	var err error
 	OID := data.Client
 	vehicleID, OK := domain.OIDToVehicleID[int(OID)]
 	if !OK {
 		vehicles, _ := domain.AuxiliaryInformationRepository.GetVehiclesByProviderIP(providerIP)
-		vehicleID = domain.getVehicleIDFromOID(OID, vehicles)
+		vehicleID, err = domain.getVehicleIDFromOID(OID, vehicles)
 	}
 
 	if vehicleID >= 0 {
@@ -140,4 +127,6 @@ func (domain *SavePackage) Run(data *packet.NavRecord, providerIP string) {
 	} else {
 		log.Warnf("Не удалось найти машину по OID %d, телематические данные не были записаны", OID)
 	}
+
+	return err
 }
