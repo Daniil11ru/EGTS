@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"math/bits"
+	"time"
 
 	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
 	util "github.com/daniil11ru/egts/cli/receiver/repository/util"
@@ -11,6 +12,8 @@ import (
 
 type SavePackage struct {
 	PrimaryRepository repository.PrimaryRepository
+	DBSaveMonthStart  int
+	DBSaveMonthEnd    int
 }
 
 func isPrefixBytes(a, b uint64, n int) bool {
@@ -148,6 +151,12 @@ func (s *SavePackage) Run(data *util.NavRecord, providerIP string) error {
 	}
 	if moderationStatus == source.ModerationStatusRejected {
 		return fmt.Errorf("запись телематических данных для транспорта с ID %d запрещена", vehicleID)
+	}
+
+	navTime := time.Unix(data.NavigationTimestamp, 0).UTC()
+	month := int(navTime.Month())
+	if month < s.DBSaveMonthStart || month > s.DBSaveMonthEnd {
+		return nil
 	}
 
 	if _, err := s.PrimaryRepository.AddVehicleMovement(data, int(vehicleID)); err != nil {
