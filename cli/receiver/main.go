@@ -75,7 +75,11 @@ func main() {
 
 	primaryRepository := repository.PrimaryRepository{Source: &primarySource}
 
-	savePacket := domain.SavePackage{PrimaryRepository: primaryRepository}
+	savePacket := domain.SavePackage{
+		PrimaryRepository:            primaryRepository,
+		AddVehicleMovementMonthStart: cfg.GetSaveTelematicsDataMonthStart(),
+		AddVehicleMovementMonthEnd:   cfg.GetSaveTelematicsDataMonthEnd(),
+	}
 	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
 
 	defer connector.Close()
