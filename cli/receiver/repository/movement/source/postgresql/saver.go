@@ -60,7 +60,7 @@ func (c *Saver) Save(msg interface{ ToBytes() ([]byte, error) }, vehicleID int) 
 	packetDataField := c.settings.PacketDataField
 	vehicleMovementTable := c.settings.VehicleMovementTable
 
-	insertQuery := fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1, $2)", vehicleMovementTable, packetDataField)
+	insertQuery := fmt.Sprintf("INSERT INTO %s (%s, vehicle_id) VALUES ($1, $2)", vehicleMovementTable, packetDataField)
 	if _, err = c.connector.GetConnection().Exec(insertQuery, innerPkg, vehicleID); err != nil {
 		return fmt.Errorf("не удалось вставить запись: %v", err)
 	}

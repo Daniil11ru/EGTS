@@ -7,20 +7,15 @@ import (
 )
 
 type Vehicle struct {
-	ID                 int
+	ID                 int32
 	IMEI               int64
-	OID                sql.NullInt64
-	LicensePlateNumber string
-	DirectoryID        int
-}
-
-type VehicleDirectory struct {
-	ID         int
-	ProviderID int
+	OID                sql.NullInt32
+	LicensePlateNumber sql.NullString
+	ProviderID         int32
 }
 
 type Provider struct {
-	ID   int
+	ID   int32
 	Name string
 	IP   []string
 }
@@ -28,9 +23,12 @@ type Provider struct {
 type AuxiliaryInformationSource interface {
 	Initialize(connector connector.Connector)
 	GetAllVehicles() ([]Vehicle, error)
-	GetAllDirectories() ([]VehicleDirectory, error)
 	GetAllProviders() ([]Provider, error)
 	GetVehiclesByProviderIP(ip string) ([]Vehicle, error)
 	GetVehicleByOID(OID int32) (Vehicle, error)
+	GetVehicleByOIDAndProviderID(OID int32, providerID int32) (Vehicle, error)
+	AddVehicle(v Vehicle) (int32, error)
+	UpdateVehicleOID(id int32, OID int32) error
+	GetProviderByIP(ip string) (Provider, error)
 	GetAllIPs() ([]string, error)
 }

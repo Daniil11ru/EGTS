@@ -8,23 +8,36 @@ import (
 	"github.com/daniil11ru/egts/cli/receiver/repository/movement"
 	packet "github.com/daniil11ru/egts/cli/receiver/repository/movement/util"
 	source "github.com/daniil11ru/egts/cli/receiver/source/auxiliary"
-	log "github.com/sirupsen/logrus"
 )
+
+type UniqueOID struct {
+	OID        int32
+	ProviderID int32
+}
 
 type SavePackage struct {
 	VehicleMovementRepository      *movement.VehicleMovementRepository
 	AuxiliaryInformationRepository aux.AuxiliaryInformationRepository
 
-	IDToVehicleDirectory map[int]source.VehicleDirectory
-	OIDToVehicleID       map[int]int
+	UniqueOIDToVehicleID map[UniqueOID]int32
 }
 
-func (domain *SavePackage) Initialize() {
-	directories, _ := domain.AuxiliaryInformationRepository.GetAllDirectories()
+func (domain *SavePackage) Initialize() error {
+	domain.UniqueOIDToVehicleID = make(map[UniqueOID]int32)
 
-	for _, d := range directories {
-		domain.IDToVehicleDirectory[d.ID] = d
+	vehicles, err := domain.AuxiliaryInformationRepository.GetAllVehicles()
+	if err != nil {
+		return fmt.Errorf("не удалось инициализировать кэш: %w", err)
 	}
+
+	for _, v := range vehicles {
+		if v.OID.Valid {
+			uniqueOID := UniqueOID{OID: v.OID.Int32, ProviderID: v.ProviderID}
+			domain.UniqueOIDToVehicleID[uniqueOID] = v.ID
+		}
+	}
+
+	return nil
 }
 
 func isPrefixBytes(a, b uint64, n int) bool {
@@ -92,9 +105,9 @@ func isPartOf(a, b uint64) bool {
 	return false
 }
 
-func (domain *SavePackage) getVehicleIDByOID(OID uint32, vehicles []source.Vehicle) (int, error) {
+func (domain *SavePackage) getVehicleIDByOID(OID int32, vehicles []source.Vehicle) (int32, error) {
 	isFound := false
-	id := -1
+	var id int32 = 0
 
 	for _, v := range vehicles {
 		IMEI := v.IMEI
@@ -103,7 +116,7 @@ func (domain *SavePackage) getVehicleIDByOID(OID uint32, vehicles []source.Vehic
 			if !isFound {
 				id = v.ID
 			} else {
-				id = -1
+				id = 0
 				return id, fmt.Errorf("не удалось однозначно определить IMEI")
 			}
 		}
@@ -112,31 +125,56 @@ func (domain *SavePackage) getVehicleIDByOID(OID uint32, vehicles []source.Vehic
 	return id, fmt.Errorf("не удалось определить IMEI")
 }
 
-func (domain *SavePackage) getVehicleIDByOIDFromStorage(OID int32) (int, error) {
-	vehicle, err := domain.AuxiliaryInformationRepository.GetVehicleByOID(int32(OID))
+func (domain *SavePackage) getVehicleIDByOIDAndProviderIDFromStorage(OID int32, providerID int32) (int32, error) {
+	vehicle, err := domain.AuxiliaryInformationRepository.GetVehicleByOIDAndProviderID(OID, providerID)
 	return vehicle.ID, err
 }
 
-func (domain *SavePackage) Run(data *packet.NavRecord, providerIP string) error {
-	var err error
-	OID := data.Client
-	vehicleID, OK := domain.OIDToVehicleID[int(OID)]
-	if !OK {
-		vehicleID, err = domain.getVehicleIDByOIDFromStorage(int32(OID))
-		if err != nil {
-			vehicles, _ := domain.AuxiliaryInformationRepository.GetVehiclesByProviderIP(providerIP)
-			vehicleID, err = domain.getVehicleIDByOID(OID, vehicles)
-		}
+func (s *SavePackage) resolveVehicleID(OID int32, providerIP string) (int32, error) {
+	providerID, getProviderIDError := s.AuxiliaryInformationRepository.GetProviderIDByIP(providerIP)
+	if getProviderIDError != nil {
+		return providerID, getProviderIDError
 	}
 
-	if vehicleID >= 0 && err == nil {
-		domain.VehicleMovementRepository.Save(data, vehicleID)
-		if !OK {
-			domain.OIDToVehicleID[int(OID)] = vehicleID
-		}
-	} else {
-		log.Warnf("Не удалось найти машину по OID %d, телематические данные не были записаны", OID)
+	uniqueOID := UniqueOID{OID: OID, ProviderID: providerID}
+	if id, ok := s.UniqueOIDToVehicleID[uniqueOID]; ok {
+		return id, nil
 	}
 
-	return fmt.Errorf("не удалось найти машину по OID %d, телематические данные не были записаны", OID)
+	id, err := s.getVehicleIDByOIDAndProviderIDFromStorage(OID, providerID)
+	if err == nil {
+		s.UniqueOIDToVehicleID[uniqueOID] = id
+		return id, nil
+	}
+
+	vehicles, auxErr := s.AuxiliaryInformationRepository.GetVehiclesByProviderIP(providerIP)
+	if auxErr != nil {
+		return -1, auxErr
+	}
+
+	id, err = s.getVehicleIDByOID(OID, vehicles)
+	if err != nil {
+		id, err = s.AuxiliaryInformationRepository.AddIndefiniteVehicle(OID, providerID)
+		s.UniqueOIDToVehicleID[uniqueOID] = id
+		return id, err
+	}
+
+	s.AuxiliaryInformationRepository.UpdateVehicleOID(id, OID)
+	s.UniqueOIDToVehicleID[uniqueOID] = id
+	return id, nil
+}
+
+func (s *SavePackage) Run(data *packet.NavRecord, providerIP string) error {
+	oid := int32(data.Client)
+
+	vehicleID, err := s.resolveVehicleID(oid, providerIP)
+	if err != nil {
+		return fmt.Errorf("не удалось найти транспорт по OID %d: %w", oid, err)
+	}
+
+	if err := s.VehicleMovementRepository.Save(data, int(vehicleID)); err != nil {
+		return fmt.Errorf("не удалось сохранить телематические данные для OID %d: %w", oid, err)
+	}
+
+	return nil
 }

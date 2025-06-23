@@ -47,7 +47,7 @@ CREATE TABLE "public"."vehicle" (
     "license_plate_number" varchar(8),
     "vehicle_directory_id" int4 NOT NULL,
     "id" int4 NOT NULL DEFAULT nextval('vehicle_id_seq'::regclass),
-    CONSTRAINT "alllowed_vehicle_vehicle_directory_metadata_id_fkey" FOREIGN KEY ("vehicle_directory_id") REFERENCES "public"."vehicle_directory"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "allowed_vehicle_vehicle_directory_metadata_id_fkey" FOREIGN KEY ("vehicle_directory_id") REFERENCES "public"."vehicle_directory"("id") ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY ("id")
 );
 

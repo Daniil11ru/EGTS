@@ -23,6 +23,16 @@ func NewCustom(addr string, ttl time.Duration, savePackage *domain.SavePackage, 
 	return &CustomServer{Server: New(addr, ttl, savePackage), GetIPWhiteList: getIPWhiteList}
 }
 
+func (server *CustomServer) getIPFromIPAndPort(ipAndPort string) (string, error) {
+	var re = regexp.MustCompile(`^((?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}):(\d{1,5})$`)
+	matches := re.FindStringSubmatch(ipAndPort)
+	if matches == nil {
+		return "", fmt.Errorf("не удалось получить IP-адрес")
+	}
+
+	return matches[1], nil
+}
+
 func (server *CustomServer) Run() {
 	var err error
 	server.l, err = net.Listen("tcp", server.addr)
@@ -44,13 +54,11 @@ func (server *CustomServer) Run() {
 	for {
 		conn, err := server.l.Accept()
 
-		var re = regexp.MustCompile(`^((?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}):(\d{1,5})$`)
-		matches := re.FindStringSubmatch(conn.RemoteAddr().String())
-		if matches == nil {
+		IP, getIpFromIPAndPortErr := server.getIPFromIPAndPort(conn.RemoteAddr().String())
+		if getIpFromIPAndPortErr != nil {
 			log.Warn("Адрес отправителя не является IP-адресом!")
 			continue
 		}
-		IP := matches[1]
 
 		isInWhiteList := false
 		for i := 0; i < len(whiteList); i++ {
@@ -271,7 +279,15 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 
 		exportPacket.Client = client
 		if isPkgSave && recStatus == egtsPcOk {
-			return s.savePackage.Run(&exportPacket, conn.RemoteAddr().String())
+			IP, getIPFromIPAndPortErr := s.getIPFromIPAndPort(conn.RemoteAddr().String())
+			if getIPFromIPAndPortErr != nil {
+				log.Warn("Адрес отправителя не является IP-адресом!")
+			} else {
+				savePackageError := s.savePackage.Run(&exportPacket, IP)
+				if savePackageError != nil {
+					log.Warn(savePackageError)
+				}
+			}
 		}
 	}
 
