@@ -128,6 +128,37 @@ func (p *PostgresAuxSource) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, e
 	return vehicles, nil
 }
 
+func (p *PostgresAuxSource) GetVehicleByID(id int32) (aux.Vehicle, error) {
+	db, err := p.db()
+	if err != nil {
+		return aux.Vehicle{}, err
+	}
+
+	const q = `
+		SELECT id, imei, oid, license_plate_number, provider_id, moderation_status
+		FROM vehicle
+		WHERE id = $1
+	`
+	row := db.QueryRow(q, id)
+
+	var v aux.Vehicle
+	if err := row.Scan(
+		&v.ID,
+		&v.IMEI,
+		&v.OID,
+		&v.LicensePlateNumber,
+		&v.ProviderID,
+		&v.ModerationStatus,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return aux.Vehicle{}, fmt.Errorf("транспорт с ID %d не найден", id)
+		}
+		return aux.Vehicle{}, err
+	}
+
+	return v, nil
+}
+
 func (p *PostgresAuxSource) GetVehicleByOID(oid int32) (aux.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {

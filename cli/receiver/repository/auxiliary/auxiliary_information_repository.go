@@ -14,6 +14,11 @@ func (auxInfoRepo *AuxiliaryInformationRepository) GetAllVehicles() ([]aux.Vehic
 	return auxInfoRepo.Source.GetAllVehicles()
 }
 
+func (auxInfoRepo *AuxiliaryInformationRepository) GetVehicleModerationStatus(id int32) (aux.ModerationStatus, error) {
+	vehicle, err := auxInfoRepo.Source.GetVehicleByID(id)
+	return vehicle.ModerationStatus, err
+}
+
 func (auxInfoRepo *AuxiliaryInformationRepository) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, error) {
 	return auxInfoRepo.Source.GetVehiclesByProviderIP(ip)
 }

@@ -19,11 +19,13 @@ type SavePackage struct {
 	VehicleMovementRepository      *movement.VehicleMovementRepository
 	AuxiliaryInformationRepository aux.AuxiliaryInformationRepository
 
-	UniqueOIDToVehicleID map[UniqueOID]int32
+	UniqueOIDToVehicleID        map[UniqueOID]int32
+	VehicleIDToModerationStatus map[int32]source.ModerationStatus
 }
 
 func (domain *SavePackage) Initialize() error {
 	domain.UniqueOIDToVehicleID = make(map[UniqueOID]int32)
+	domain.VehicleIDToModerationStatus = make(map[int32]source.ModerationStatus)
 
 	vehicles, err := domain.AuxiliaryInformationRepository.GetAllVehicles()
 	if err != nil {
@@ -35,6 +37,7 @@ func (domain *SavePackage) Initialize() error {
 			uniqueOID := UniqueOID{OID: v.OID.Int32, ProviderID: v.ProviderID}
 			domain.UniqueOIDToVehicleID[uniqueOID] = v.ID
 		}
+		domain.VehicleIDToModerationStatus[v.ID] = v.ModerationStatus
 	}
 
 	return nil
@@ -164,6 +167,20 @@ func (s *SavePackage) resolveVehicleID(OID int32, providerIP string) (int32, err
 	return id, nil
 }
 
+func (s *SavePackage) resolveModerationStatus(id int32) (source.ModerationStatus, error) {
+	moderationStatus, OK := s.VehicleIDToModerationStatus[id]
+	if OK {
+		return moderationStatus, nil
+	}
+
+	moderationStatus, err := s.AuxiliaryInformationRepository.GetVehicleModerationStatus(id)
+	if err == nil {
+		s.VehicleIDToModerationStatus[id] = moderationStatus
+	}
+
+	return moderationStatus, err
+}
+
 func (s *SavePackage) Run(data *packet.NavRecord, providerIP string) error {
 	oid := int32(data.Client)
 
@@ -172,8 +189,16 @@ func (s *SavePackage) Run(data *packet.NavRecord, providerIP string) error {
 		return fmt.Errorf("не удалось найти транспорт по OID %d: %w", oid, err)
 	}
 
+	moderationStatus, err := s.resolveModerationStatus(vehicleID)
+	if err != nil {
+		return fmt.Errorf("не удалось определить статус модерации транспорта с ID %d: %w", vehicleID, err)
+	}
+	if moderationStatus == source.ModerationStatusRejected {
+		return fmt.Errorf("запись телематических данных для транспорта с ID %d запрещена", vehicleID)
+	}
+
 	if err := s.VehicleMovementRepository.Save(data, int(vehicleID)); err != nil {
-		return fmt.Errorf("не удалось сохранить телематические данные для OID %d: %w", oid, err)
+		return fmt.Errorf("не удалось сохранить телематические данные для транспорта с ID %d: %w", vehicleID, err)
 	}
 
 	return nil

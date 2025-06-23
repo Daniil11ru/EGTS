@@ -48,6 +48,7 @@ type AuxiliaryInformationSource interface {
 	Initialize(connector connector.Connector)
 	GetAllVehicles() ([]Vehicle, error)
 	GetAllProviders() ([]Provider, error)
+	GetVehicleByID(id int32) (Vehicle, error)
 	GetVehiclesByProviderIP(ip string) ([]Vehicle, error)
 	GetVehicleByOID(OID int32) (Vehicle, error)
 	GetVehicleByOIDAndProviderID(OID int32, providerID int32) (Vehicle, error)

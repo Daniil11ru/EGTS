@@ -285,7 +285,7 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 			} else {
 				savePackageError := s.savePackage.Run(&exportPacket, IP)
 				if savePackageError != nil {
-					log.Warn(savePackageError)
+					log.Warnf("Телематические данные не были сохранены: %s", savePackageError)
 				}
 			}
 		}
