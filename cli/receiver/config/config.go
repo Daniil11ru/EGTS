@@ -10,15 +10,15 @@ import (
 )
 
 type Settings struct {
-	Host             string                       `yaml:"host"`
-	Port             string                       `yaml:"port"`
-	ConnTTL          int                          `yaml:"conn_ttl"`
-	LogLevel         string                       `yaml:"log_level"`
-	LogFilePath      string                       `yaml:"log_file_path"`
-	LogMaxAgeDays    int                          `yaml:"log_max_age_days"`
-	Store            map[string]map[string]string `yaml:"storage"`
-	DBSaveMonthStart int                          `yaml:"db_save_month_start"`
-	DBSaveMonthEnd   int                          `yaml:"db_save_month_end"`
+	Host             string            `yaml:"host"`
+	Port             string            `yaml:"port"`
+	ConnTTL          int               `yaml:"conn_ttl"`
+	LogLevel         string            `yaml:"log_level"`
+	LogFilePath      string            `yaml:"log_file_path"`
+	LogMaxAgeDays    int               `yaml:"log_max_age_days"`
+	Store            map[string]string `yaml:"storage"`
+	DBSaveMonthStart int               `yaml:"db_save_month_start"`
+	DBSaveMonthEnd   int               `yaml:"db_save_month_end"`
 }
 
 func (s *Settings) GetEmptyConnTTL() time.Duration {

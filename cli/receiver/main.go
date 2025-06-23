@@ -6,13 +6,11 @@ import (
 	"path/filepath"
 
 	"github.com/daniil11ru/egts/cli/receiver/config"
-	pgconnector "github.com/daniil11ru/egts/cli/receiver/connector/postgresql"
+	connector "github.com/daniil11ru/egts/cli/receiver/connector/postgresql"
 	"github.com/daniil11ru/egts/cli/receiver/domain"
-	aux "github.com/daniil11ru/egts/cli/receiver/repository/auxiliary"
-	mov "github.com/daniil11ru/egts/cli/receiver/repository/movement"
-	"github.com/daniil11ru/egts/cli/receiver/repository/movement/source"
+	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
 	"github.com/daniil11ru/egts/cli/receiver/server"
-	auxsrc "github.com/daniil11ru/egts/cli/receiver/source/auxiliary/postgresql"
+	source "github.com/daniil11ru/egts/cli/receiver/source/primary/pg"
 
 	"github.com/rifflock/lfshook"
 	log "github.com/sirupsen/logrus"
@@ -69,25 +67,18 @@ func main() {
 		log.AddHook(hook)
 	}
 
-	telematicsDataStorages := source.NewRepository(cfg.GetDBSaveMonthStart(), cfg.GetDBSaveMonthEnd())
-	if err := telematicsDataStorages.LoadStorages(cfg.Store); err != nil {
-		log.Errorf("Ошибка загрузки хранилища: %v", err)
-	}
-	vehicleMovementRepository := mov.NewVehicleMovementRepository(telematicsDataStorages, 1024, 0)
+	connector := connector.Connector{}
+	connector.Connect(cfg.Store)
 
-	connector := pgconnector.Connector{}
-	connector.Connect(cfg.Store["postgresql"])
+	primarySource := source.PrimarySource{}
+	primarySource.Initialize(&connector)
 
-	auxInfoSource := auxsrc.PostgresAuxSource{}
-	auxInfoSource.Initialize(&connector)
-	auxInfoRepository := aux.AuxiliaryInformationRepository{Source: &auxInfoSource}
+	primaryRepository := repository.PrimaryRepository{Source: &primarySource}
 
-	savePacket := domain.SavePackage{VehicleMovementRepository: vehicleMovementRepository, AuxiliaryInformationRepository: auxInfoRepository}
-
-	getIPWhiteList := domain.GetIPWhiteList{AuxiliaryInformationRepository: auxInfoRepository}
+	savePacket := domain.SavePackage{PrimaryRepository: primaryRepository}
+	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
 
 	defer connector.Close()
-	defer vehicleMovementRepository.Close()
 
 	srv := server.NewCustom(cfg.GetListenAddress(), cfg.GetEmptyConnTTL(), &savePacket, getIPWhiteList)
 	srv.Run()

@@ -1,13 +1,13 @@
 package domain
 
 import (
-	aux "github.com/daniil11ru/egts/cli/receiver/repository/auxiliary"
+	"github.com/daniil11ru/egts/cli/receiver/repository/primary"
 )
 
 type GetIPWhiteList struct {
-	AuxiliaryInformationRepository aux.AuxiliaryInformationRepository
+	PrimaryRepository primary.PrimaryRepository
 }
 
 func (domain *GetIPWhiteList) Run() ([]string, error) {
-	return domain.AuxiliaryInformationRepository.Source.GetAllIPs()
+	return domain.PrimaryRepository.Source.GetAllIPs()
 }

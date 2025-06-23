@@ -1,4 +1,4 @@
-package auxiliary
+package primary
 
 import (
 	"database/sql"
@@ -56,4 +56,5 @@ type AuxiliaryInformationSource interface {
 	UpdateVehicleOID(id int32, OID int32) error
 	GetProviderByIP(ip string) (Provider, error)
 	GetAllIPs() ([]string, error)
+	AddVehicleMovement(message interface{ ToBytes() ([]byte, error) }, vehicleID int) (int32, error)
 }

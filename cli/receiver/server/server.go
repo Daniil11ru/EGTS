@@ -7,7 +7,7 @@ import (
 	"time"
 
 	domain "github.com/daniil11ru/egts/cli/receiver/domain"
-	packet "github.com/daniil11ru/egts/cli/receiver/repository/movement/util"
+	packet "github.com/daniil11ru/egts/cli/receiver/repository/util"
 	"github.com/daniil11ru/egts/libs/egts"
 	log "github.com/sirupsen/logrus"
 )

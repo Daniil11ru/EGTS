@@ -1,34 +1,34 @@
-package postgresql
+package pg
 
 import (
 	"database/sql"
 	"fmt"
 
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
-	aux "github.com/daniil11ru/egts/cli/receiver/source/auxiliary"
+	"github.com/daniil11ru/egts/cli/receiver/source/primary"
 	"github.com/lib/pq"
 )
 
-type PostgresAuxSource struct {
-	conn connector.Connector
+type PrimarySource struct {
+	connector connector.Connector
 }
 
-func (p *PostgresAuxSource) Initialize(c connector.Connector) {
-	p.conn = c
+func (p *PrimarySource) Initialize(c connector.Connector) {
+	p.connector = c
 }
 
-func (p *PostgresAuxSource) db() (*sql.DB, error) {
-	if p.conn == nil {
+func (p *PrimarySource) db() (*sql.DB, error) {
+	if p.connector == nil {
 		return nil, fmt.Errorf("не удалось инициализировать подключение к базе данных")
 	}
-	db := p.conn.GetConnection()
+	db := p.connector.GetConnection()
 	if db == nil {
 		return nil, fmt.Errorf("нет активного подключения к базе данных")
 	}
 	return db, nil
 }
 
-func (p *PostgresAuxSource) GetAllVehicles() ([]aux.Vehicle, error) {
+func (p *PrimarySource) GetAllVehicles() ([]primary.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
 		return nil, err
@@ -41,9 +41,9 @@ func (p *PostgresAuxSource) GetAllVehicles() ([]aux.Vehicle, error) {
 	}
 	defer rows.Close()
 
-	var vehicles []aux.Vehicle
+	var vehicles []primary.Vehicle
 	for rows.Next() {
-		var v aux.Vehicle
+		var v primary.Vehicle
 		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return nil, err
 		}
@@ -55,7 +55,7 @@ func (p *PostgresAuxSource) GetAllVehicles() ([]aux.Vehicle, error) {
 	return vehicles, nil
 }
 
-func (p *PostgresAuxSource) GetAllProviders() ([]aux.Provider, error) {
+func (p *PrimarySource) GetAllProviders() ([]primary.Provider, error) {
 	db, err := p.db()
 	if err != nil {
 		return nil, err
@@ -75,9 +75,9 @@ func (p *PostgresAuxSource) GetAllProviders() ([]aux.Provider, error) {
 	}
 	defer rows.Close()
 
-	var providers []aux.Provider
+	var providers []primary.Provider
 	for rows.Next() {
-		var pr aux.Provider
+		var pr primary.Provider
 		var ips pq.StringArray
 		if err := rows.Scan(&pr.ID, &pr.Name, &ips); err != nil {
 			return nil, err
@@ -91,7 +91,7 @@ func (p *PostgresAuxSource) GetAllProviders() ([]aux.Provider, error) {
 	return providers, nil
 }
 
-func (p *PostgresAuxSource) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, error) {
+func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]primary.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
 		return nil, err
@@ -114,9 +114,9 @@ func (p *PostgresAuxSource) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, e
 	}
 	defer rows.Close()
 
-	var vehicles []aux.Vehicle
+	var vehicles []primary.Vehicle
 	for rows.Next() {
-		var v aux.Vehicle
+		var v primary.Vehicle
 		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return nil, err
 		}
@@ -128,10 +128,10 @@ func (p *PostgresAuxSource) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, e
 	return vehicles, nil
 }
 
-func (p *PostgresAuxSource) GetVehicleByID(id int32) (aux.Vehicle, error) {
+func (p *PrimarySource) GetVehicleByID(id int32) (primary.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
-		return aux.Vehicle{}, err
+		return primary.Vehicle{}, err
 	}
 
 	const q = `
@@ -141,7 +141,7 @@ func (p *PostgresAuxSource) GetVehicleByID(id int32) (aux.Vehicle, error) {
 	`
 	row := db.QueryRow(q, id)
 
-	var v aux.Vehicle
+	var v primary.Vehicle
 	if err := row.Scan(
 		&v.ID,
 		&v.IMEI,
@@ -151,18 +151,18 @@ func (p *PostgresAuxSource) GetVehicleByID(id int32) (aux.Vehicle, error) {
 		&v.ModerationStatus,
 	); err != nil {
 		if err == sql.ErrNoRows {
-			return aux.Vehicle{}, fmt.Errorf("транспорт с ID %d не найден", id)
+			return primary.Vehicle{}, fmt.Errorf("транспорт с ID %d не найден", id)
 		}
-		return aux.Vehicle{}, err
+		return primary.Vehicle{}, err
 	}
 
 	return v, nil
 }
 
-func (p *PostgresAuxSource) GetVehicleByOID(oid int32) (aux.Vehicle, error) {
+func (p *PrimarySource) GetVehicleByOID(oid int32) (primary.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
-		return aux.Vehicle{}, err
+		return primary.Vehicle{}, err
 	}
 
 	const q = `
@@ -172,18 +172,18 @@ func (p *PostgresAuxSource) GetVehicleByOID(oid int32) (aux.Vehicle, error) {
     `
 	rows, err := db.Query(q, oid)
 	if err != nil {
-		return aux.Vehicle{}, err
+		return primary.Vehicle{}, err
 	}
 	defer rows.Close()
 
 	var (
-		v     aux.Vehicle
+		v     primary.Vehicle
 		count int
 	)
 	for rows.Next() {
-		var tmp aux.Vehicle
+		var tmp primary.Vehicle
 		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
-			return aux.Vehicle{}, err
+			return primary.Vehicle{}, err
 		}
 		if count == 0 {
 			v = tmp
@@ -194,23 +194,23 @@ func (p *PostgresAuxSource) GetVehicleByOID(oid int32) (aux.Vehicle, error) {
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return aux.Vehicle{}, err
+		return primary.Vehicle{}, err
 	}
 
 	switch count {
 	case 0:
-		return aux.Vehicle{}, fmt.Errorf("транспорт с OID %d не найден", oid)
+		return primary.Vehicle{}, fmt.Errorf("транспорт с OID %d не найден", oid)
 	case 1:
 		return v, nil
 	default:
-		return aux.Vehicle{}, fmt.Errorf("найдено множество транспортных единиц с OID %d", oid)
+		return primary.Vehicle{}, fmt.Errorf("найдено множество транспортных единиц с OID %d", oid)
 	}
 }
 
-func (p *PostgresAuxSource) GetVehicleByOIDAndProviderID(oid int32, providerID int32) (aux.Vehicle, error) {
+func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid int32, providerID int32) (primary.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
-		return aux.Vehicle{}, err
+		return primary.Vehicle{}, err
 	}
 
 	const q = `
@@ -220,18 +220,18 @@ func (p *PostgresAuxSource) GetVehicleByOIDAndProviderID(oid int32, providerID i
 	`
 	rows, err := db.Query(q, oid, providerID)
 	if err != nil {
-		return aux.Vehicle{}, err
+		return primary.Vehicle{}, err
 	}
 	defer rows.Close()
 
 	var (
-		v     aux.Vehicle
+		v     primary.Vehicle
 		count int
 	)
 	for rows.Next() {
-		var tmp aux.Vehicle
+		var tmp primary.Vehicle
 		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
-			return aux.Vehicle{}, err
+			return primary.Vehicle{}, err
 		}
 		if count == 0 {
 			v = tmp
@@ -242,20 +242,20 @@ func (p *PostgresAuxSource) GetVehicleByOIDAndProviderID(oid int32, providerID i
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return aux.Vehicle{}, err
+		return primary.Vehicle{}, err
 	}
 
 	switch count {
 	case 0:
-		return aux.Vehicle{}, fmt.Errorf("транспорт с OID %d и провайдером %d не найден", oid, providerID)
+		return primary.Vehicle{}, fmt.Errorf("транспорт с OID %d и провайдером %d не найден", oid, providerID)
 	case 1:
 		return v, nil
 	default:
-		return aux.Vehicle{}, fmt.Errorf("найдено несколько транспортных единиц с OID %d и провайдером %d", oid, providerID)
+		return primary.Vehicle{}, fmt.Errorf("найдено несколько транспортных единиц с OID %d и провайдером %d", oid, providerID)
 	}
 }
 
-func (p *PostgresAuxSource) AddVehicle(v aux.Vehicle) (int32, error) {
+func (p *PrimarySource) AddVehicle(v primary.Vehicle) (int32, error) {
 	db, err := p.db()
 	if err != nil {
 		return 0, err
@@ -274,7 +274,7 @@ func (p *PostgresAuxSource) AddVehicle(v aux.Vehicle) (int32, error) {
 	return id, nil
 }
 
-func (p *PostgresAuxSource) UpdateVehicleOID(id int32, oid int32) error {
+func (p *PrimarySource) UpdateVehicleOID(id int32, oid int32) error {
 	db, err := p.db()
 	if err != nil {
 		return err
@@ -301,10 +301,10 @@ func (p *PostgresAuxSource) UpdateVehicleOID(id int32, oid int32) error {
 	return nil
 }
 
-func (p *PostgresAuxSource) GetProviderByIP(ip string) (aux.Provider, error) {
+func (p *PrimarySource) GetProviderByIP(ip string) (primary.Provider, error) {
 	db, err := p.db()
 	if err != nil {
-		return aux.Provider{}, err
+		return primary.Provider{}, err
 	}
 
 	const q = `
@@ -319,19 +319,19 @@ func (p *PostgresAuxSource) GetProviderByIP(ip string) (aux.Provider, error) {
 	`
 
 	row := db.QueryRow(q, ip)
-	var pr aux.Provider
+	var pr primary.Provider
 	var ips pq.StringArray
 	if err := row.Scan(&pr.ID, &pr.Name, &ips); err != nil {
 		if err == sql.ErrNoRows {
-			return aux.Provider{}, fmt.Errorf("провайдер с IP %s не найден", ip)
+			return primary.Provider{}, fmt.Errorf("провайдер с IP %s не найден", ip)
 		}
-		return aux.Provider{}, err
+		return primary.Provider{}, err
 	}
 	pr.IP = []string(ips)
 	return pr, nil
 }
 
-func (p *PostgresAuxSource) GetAllIPs() ([]string, error) {
+func (p *PrimarySource) GetAllIPs() ([]string, error) {
 	db, err := p.db()
 	if err != nil {
 		return nil, err
@@ -358,4 +358,27 @@ func (p *PostgresAuxSource) GetAllIPs() ([]string, error) {
 		return nil, err
 	}
 	return ips, nil
+}
+
+func (p *PrimarySource) AddVehicleMovement(message interface{ ToBytes() ([]byte, error) }, vehicleID int) (int32, error) {
+	if message == nil {
+		return 0, fmt.Errorf("некорректная ссылка на пакет")
+	}
+
+	packet, err := message.ToBytes()
+	if err != nil {
+		return 0, fmt.Errorf("ошибка сериализации пакета: %v", err)
+	}
+
+	const insertQuery = `
+        INSERT INTO vehicle_movement (data, vehicle_id)
+        VALUES ($1, $2)
+        RETURNING id
+    `
+	var id int32
+	if err := p.connector.GetConnection().QueryRow(insertQuery, packet, vehicleID).Scan(&id); err != nil {
+		return 0, fmt.Errorf("не удалось вставить запись: %v", err)
+	}
+
+	return id, nil
 }

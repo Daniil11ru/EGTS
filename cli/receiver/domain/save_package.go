@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"math/bits"
 
-	aux "github.com/daniil11ru/egts/cli/receiver/repository/auxiliary"
-	"github.com/daniil11ru/egts/cli/receiver/repository/movement"
-	packet "github.com/daniil11ru/egts/cli/receiver/repository/movement/util"
-	source "github.com/daniil11ru/egts/cli/receiver/source/auxiliary"
+	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
+	util "github.com/daniil11ru/egts/cli/receiver/repository/util"
+	source "github.com/daniil11ru/egts/cli/receiver/source/primary"
 )
 
 type SavePackage struct {
-	VehicleMovementRepository      *movement.VehicleMovementRepository
-	AuxiliaryInformationRepository aux.AuxiliaryInformationRepository
+	PrimaryRepository repository.PrimaryRepository
 }
 
 func isPrefixBytes(a, b uint64, n int) bool {
@@ -101,12 +99,12 @@ func (domain *SavePackage) getVehicleIDByOID(OID int32, vehicles []source.Vehicl
 }
 
 func (domain *SavePackage) getVehicleIDByOIDAndProviderIDFromStorage(OID int32, providerID int32) (int32, error) {
-	vehicle, err := domain.AuxiliaryInformationRepository.GetVehicleByOIDAndProviderID(OID, providerID)
+	vehicle, err := domain.PrimaryRepository.GetVehicleByOIDAndProviderID(OID, providerID)
 	return vehicle.ID, err
 }
 
 func (s *SavePackage) resolveVehicleID(OID int32, providerIP string) (int32, error) {
-	providerID, getProviderIDError := s.AuxiliaryInformationRepository.GetProviderIDByIP(providerIP)
+	providerID, getProviderIDError := s.PrimaryRepository.GetProviderIDByIP(providerIP)
 	if getProviderIDError != nil {
 		return providerID, getProviderIDError
 	}
@@ -116,27 +114,27 @@ func (s *SavePackage) resolveVehicleID(OID int32, providerIP string) (int32, err
 		return id, nil
 	}
 
-	vehicles, auxErr := s.AuxiliaryInformationRepository.GetVehiclesByProviderIP(providerIP)
+	vehicles, auxErr := s.PrimaryRepository.GetVehiclesByProviderIP(providerIP)
 	if auxErr != nil {
-		return -1, auxErr
+		return 0, auxErr
 	}
 
 	id, err = s.getVehicleIDByOID(OID, vehicles)
 	if err != nil {
-		id, err = s.AuxiliaryInformationRepository.AddIndefiniteVehicle(OID, providerID)
+		id, err = s.PrimaryRepository.AddIndefiniteVehicle(OID, providerID)
 		return id, err
 	}
 
-	s.AuxiliaryInformationRepository.UpdateVehicleOID(id, OID)
+	s.PrimaryRepository.UpdateVehicleOID(id, OID)
 	return id, nil
 }
 
 func (s *SavePackage) resolveModerationStatus(id int32) (source.ModerationStatus, error) {
-	moderationStatus, err := s.AuxiliaryInformationRepository.GetVehicleModerationStatus(id)
+	moderationStatus, err := s.PrimaryRepository.GetVehicleModerationStatus(id)
 	return moderationStatus, err
 }
 
-func (s *SavePackage) Run(data *packet.NavRecord, providerIP string) error {
+func (s *SavePackage) Run(data *util.NavRecord, providerIP string) error {
 	oid := int32(data.Client)
 
 	vehicleID, err := s.resolveVehicleID(oid, providerIP)
@@ -152,7 +150,7 @@ func (s *SavePackage) Run(data *packet.NavRecord, providerIP string) error {
 		return fmt.Errorf("запись телематических данных для транспорта с ID %d запрещена", vehicleID)
 	}
 
-	if err := s.VehicleMovementRepository.Save(data, int(vehicleID)); err != nil {
+	if _, err := s.PrimaryRepository.AddVehicleMovement(data, int(vehicleID)); err != nil {
 		return fmt.Errorf("не удалось сохранить телематические данные для транспорта с ID %d: %w", vehicleID, err)
 	}
 

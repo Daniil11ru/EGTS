@@ -8,12 +8,9 @@ db_save_month_start: 5
 db_save_month_end: 9
 
 storage:
-  postgresql:
-    host: "host.docker.internal"
-    port: "5432"
-    user: "postgres"
-    password: "123"
-    database: "egts"
-    vehicle_movement_table: "vehicle_movement"
-    packet_data_field: "data"
-    sslmode: disable
+  host: "host.docker.internal"
+  port: "5432"
+  user: "postgres"
+  password: "123"
+  database: "egts"
+  sslmode: disable
