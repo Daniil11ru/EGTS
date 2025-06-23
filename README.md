@@ -162,9 +162,9 @@ docker run --name egts-receiver -v ./configs:/etc/egts-receiver -p 6000:6000 egt
 version: '3'
 
 services:
-  redis:
-    image: redis:latest
-    container_name: egts_redis
+  postgresql:
+    image: postgresql:latest
+    container_name: egts_postgresql
 
   egts:
     image: egts:latest
@@ -185,6 +185,7 @@ conn_ttl: 10
 log_level: "DEBUG"
 
 storage:
+...
 ```
 
 Описание параметров:
@@ -192,7 +193,7 @@ storage:
 - *port* – порт;
 - *conn_ttl* – если сервер не получает информацию дольше указанного количества секунд, то соединение закрывается;
 - *log_level* – уровень журналирования;
-- *storage* – секция для указания информации о хранилищах.
+- *storage* – секция для указания информации о хранилище.
 
 ## Развертывание контейнера на тестовом Debian-сервере
 
