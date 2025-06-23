@@ -289,7 +289,13 @@ func (s *Server) handleConn(conn net.Conn) {
 
 				exportPacket.Client = client
 				if isPkgSave {
-					s.savePackage.Run(&exportPacket, conn.RemoteAddr().String())
+					pkt := exportPacket
+					ip := conn.RemoteAddr().String()
+					go func() {
+						if err := s.savePackage.Run(&pkt, ip); err != nil {
+							log.Warnf("Телематические данные не были сохранены: %v", err)
+						}
+					}()
 				}
 			}
 

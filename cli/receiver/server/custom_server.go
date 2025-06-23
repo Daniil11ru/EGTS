@@ -283,10 +283,12 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 			if getIPFromIPAndPortErr != nil {
 				log.Warn("Адрес отправителя не является IP-адресом")
 			} else {
-				savePackageError := s.savePackage.Run(&exportPacket, IP)
-				if savePackageError != nil {
-					log.Warnf("Телематические данные не были сохранены: %s", savePackageError)
-				}
+				pkt := exportPacket
+				go func() {
+					if err := s.savePackage.Run(&pkt, IP); err != nil {
+						log.Warnf("Телематические данные не были сохранены: %s", err)
+					}
+				}()
 			}
 		}
 	}

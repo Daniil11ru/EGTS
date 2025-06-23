@@ -8,7 +8,6 @@ import (
 	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
 	util "github.com/daniil11ru/egts/cli/receiver/repository/util"
 	source "github.com/daniil11ru/egts/cli/receiver/source/primary"
-	"github.com/sirupsen/logrus"
 )
 
 type SavePackage struct {
@@ -143,7 +142,6 @@ func (s *SavePackage) Run(data *util.NavRecord, providerIP string) error {
 	oid := int32(data.Client)
 
 	month := int(time.Now().UTC().Month())
-	logrus.Debugf("%d", month)
 	if month < s.AddVehicleMovementMonthStart || month > s.AddVehicleMovementMonthEnd {
 		return nil
 	}
