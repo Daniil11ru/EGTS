@@ -10,37 +10,9 @@ import (
 	source "github.com/daniil11ru/egts/cli/receiver/source/auxiliary"
 )
 
-type UniqueOID struct {
-	OID        int32
-	ProviderID int32
-}
-
 type SavePackage struct {
 	VehicleMovementRepository      *movement.VehicleMovementRepository
 	AuxiliaryInformationRepository aux.AuxiliaryInformationRepository
-
-	UniqueOIDToVehicleID        map[UniqueOID]int32
-	VehicleIDToModerationStatus map[int32]source.ModerationStatus
-}
-
-func (domain *SavePackage) Initialize() error {
-	domain.UniqueOIDToVehicleID = make(map[UniqueOID]int32)
-	domain.VehicleIDToModerationStatus = make(map[int32]source.ModerationStatus)
-
-	vehicles, err := domain.AuxiliaryInformationRepository.GetAllVehicles()
-	if err != nil {
-		return fmt.Errorf("не удалось инициализировать кэш: %w", err)
-	}
-
-	for _, v := range vehicles {
-		if v.OID.Valid {
-			uniqueOID := UniqueOID{OID: v.OID.Int32, ProviderID: v.ProviderID}
-			domain.UniqueOIDToVehicleID[uniqueOID] = v.ID
-		}
-		domain.VehicleIDToModerationStatus[v.ID] = v.ModerationStatus
-	}
-
-	return nil
 }
 
 func isPrefixBytes(a, b uint64, n int) bool {
@@ -139,14 +111,8 @@ func (s *SavePackage) resolveVehicleID(OID int32, providerIP string) (int32, err
 		return providerID, getProviderIDError
 	}
 
-	uniqueOID := UniqueOID{OID: OID, ProviderID: providerID}
-	if id, ok := s.UniqueOIDToVehicleID[uniqueOID]; ok {
-		return id, nil
-	}
-
 	id, err := s.getVehicleIDByOIDAndProviderIDFromStorage(OID, providerID)
 	if err == nil {
-		s.UniqueOIDToVehicleID[uniqueOID] = id
 		return id, nil
 	}
 
@@ -158,26 +124,15 @@ func (s *SavePackage) resolveVehicleID(OID int32, providerIP string) (int32, err
 	id, err = s.getVehicleIDByOID(OID, vehicles)
 	if err != nil {
 		id, err = s.AuxiliaryInformationRepository.AddIndefiniteVehicle(OID, providerID)
-		s.UniqueOIDToVehicleID[uniqueOID] = id
 		return id, err
 	}
 
 	s.AuxiliaryInformationRepository.UpdateVehicleOID(id, OID)
-	s.UniqueOIDToVehicleID[uniqueOID] = id
 	return id, nil
 }
 
 func (s *SavePackage) resolveModerationStatus(id int32) (source.ModerationStatus, error) {
-	moderationStatus, OK := s.VehicleIDToModerationStatus[id]
-	if OK {
-		return moderationStatus, nil
-	}
-
 	moderationStatus, err := s.AuxiliaryInformationRepository.GetVehicleModerationStatus(id)
-	if err == nil {
-		s.VehicleIDToModerationStatus[id] = moderationStatus
-	}
-
 	return moderationStatus, err
 }
 

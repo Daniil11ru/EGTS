@@ -83,7 +83,6 @@ func main() {
 	auxInfoRepository := aux.AuxiliaryInformationRepository{Source: &auxInfoSource}
 
 	savePacket := domain.SavePackage{VehicleMovementRepository: vehicleMovementRepository, AuxiliaryInformationRepository: auxInfoRepository}
-	savePacket.Initialize()
 
 	getIPWhiteList := domain.GetIPWhiteList{AuxiliaryInformationRepository: auxInfoRepository}
 

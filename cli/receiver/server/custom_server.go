@@ -56,7 +56,7 @@ func (server *CustomServer) Run() {
 
 		IP, getIpFromIPAndPortErr := server.getIPFromIPAndPort(conn.RemoteAddr().String())
 		if getIpFromIPAndPortErr != nil {
-			log.Warn("Адрес отправителя не является IP-адресом!")
+			log.Warn("Адрес отправителя не является IP-адресом")
 			continue
 		}
 
@@ -281,7 +281,7 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 		if isPkgSave && recStatus == egtsPcOk {
 			IP, getIPFromIPAndPortErr := s.getIPFromIPAndPort(conn.RemoteAddr().String())
 			if getIPFromIPAndPortErr != nil {
-				log.Warn("Адрес отправителя не является IP-адресом!")
+				log.Warn("Адрес отправителя не является IP-адресом")
 			} else {
 				savePackageError := s.savePackage.Run(&exportPacket, IP)
 				if savePackageError != nil {
