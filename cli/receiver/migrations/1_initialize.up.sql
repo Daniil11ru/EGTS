@@ -43,10 +43,10 @@ CREATE TABLE "public"."vehicle_directory" (
 
 -- Table Definition
 CREATE TABLE "public"."vehicle" (
+    "id" int4 NOT NULL DEFAULT nextval('vehicle_id_seq'::regclass),
     "imei" int8 NOT NULL,
     "license_plate_number" varchar(8),
     "vehicle_directory_id" int4 NOT NULL,
-    "id" int4 NOT NULL DEFAULT nextval('vehicle_id_seq'::regclass),
     CONSTRAINT "allowed_vehicle_vehicle_directory_metadata_id_fkey" FOREIGN KEY ("vehicle_directory_id") REFERENCES "public"."vehicle_directory"("id") ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY ("id")
 );

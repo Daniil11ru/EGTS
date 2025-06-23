@@ -32,6 +32,7 @@ func (auxInfoRepo *AuxiliaryInformationRepository) AddIndefiniteVehicle(OID int3
 		OID:                sql.NullInt32{Int32: OID, Valid: true},
 		LicensePlateNumber: sql.NullString{String: "", Valid: false},
 		ProviderID:         providerID,
+		ModerationStatus:   aux.ModerationStatusPending,
 	},
 	)
 }

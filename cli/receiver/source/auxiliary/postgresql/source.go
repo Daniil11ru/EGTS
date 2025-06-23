@@ -34,7 +34,7 @@ func (p *PostgresAuxSource) GetAllVehicles() ([]aux.Vehicle, error) {
 		return nil, err
 	}
 
-	const q = "SELECT id, imei, oid, license_plate_number, provider_id FROM vehicle"
+	const q = "SELECT id, imei, oid, license_plate_number, provider_id, moderation_status FROM vehicle"
 	rows, err := db.Query(q)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (p *PostgresAuxSource) GetAllVehicles() ([]aux.Vehicle, error) {
 	var vehicles []aux.Vehicle
 	for rows.Next() {
 		var v aux.Vehicle
-		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID); err != nil {
+		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return nil, err
 		}
 		vehicles = append(vehicles, v)
@@ -102,7 +102,8 @@ func (p *PostgresAuxSource) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, e
 		       v.imei,
 		       v.oid,
 		       v.license_plate_number,
-		       v.provider_id
+		       v.provider_id,
+			   v.moderation_status
 		FROM vehicle v
 		JOIN provider_to_ip pi ON pi.provider_id = v.provider_id
 		WHERE pi.ip = $1
@@ -116,7 +117,7 @@ func (p *PostgresAuxSource) GetVehiclesByProviderIP(ip string) ([]aux.Vehicle, e
 	var vehicles []aux.Vehicle
 	for rows.Next() {
 		var v aux.Vehicle
-		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID); err != nil {
+		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return nil, err
 		}
 		vehicles = append(vehicles, v)
@@ -134,7 +135,7 @@ func (p *PostgresAuxSource) GetVehicleByOID(oid int32) (aux.Vehicle, error) {
 	}
 
 	const q = `
-        SELECT id, imei, oid, license_plate_number, provider_id
+        SELECT id, imei, oid, license_plate_number, provider_id, moderation_status
         FROM vehicle
         WHERE oid = $1
     `
@@ -150,7 +151,7 @@ func (p *PostgresAuxSource) GetVehicleByOID(oid int32) (aux.Vehicle, error) {
 	)
 	for rows.Next() {
 		var tmp aux.Vehicle
-		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID); err != nil {
+		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
 			return aux.Vehicle{}, err
 		}
 		if count == 0 {
@@ -182,7 +183,7 @@ func (p *PostgresAuxSource) GetVehicleByOIDAndProviderID(oid int32, providerID i
 	}
 
 	const q = `
-		SELECT id, imei, oid, license_plate_number, provider_id
+		SELECT id, imei, oid, license_plate_number, provider_id, moderation_status
 		FROM vehicle
 		WHERE oid = $1 AND provider_id = $2
 	`
@@ -198,7 +199,7 @@ func (p *PostgresAuxSource) GetVehicleByOIDAndProviderID(oid int32, providerID i
 	)
 	for rows.Next() {
 		var tmp aux.Vehicle
-		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID); err != nil {
+		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
 			return aux.Vehicle{}, err
 		}
 		if count == 0 {
@@ -230,12 +231,12 @@ func (p *PostgresAuxSource) AddVehicle(v aux.Vehicle) (int32, error) {
 	}
 
 	const q = `
-        INSERT INTO vehicle (imei, oid, license_plate_number, provider_id)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO vehicle (imei, oid, license_plate_number, provider_id, moderation_status)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING id
     `
 	var id int32
-	if err := db.QueryRow(q, v.IMEI, v.OID, v.LicensePlateNumber, v.ProviderID).Scan(&id); err != nil {
+	if err := db.QueryRow(q, v.IMEI, v.OID, v.LicensePlateNumber, v.ProviderID, v.ModerationStatus).Scan(&id); err != nil {
 		return 0, err
 	}
 
