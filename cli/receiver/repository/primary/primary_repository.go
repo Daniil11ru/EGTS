@@ -24,14 +24,14 @@ func (p *PrimaryRepository) GetVehiclesByProviderIP(ip string) ([]types.Vehicle,
 	return p.Source.GetVehiclesByProviderIP(ip)
 }
 
-func (p *PrimaryRepository) GetVehicleByOIDAndProviderID(OID int32, providerID int32) (types.Vehicle, error) {
+func (p *PrimaryRepository) GetVehicleByOIDAndProviderID(OID uint32, providerID int32) (types.Vehicle, error) {
 	return p.Source.GetVehicleByOIDAndProviderID(OID, providerID)
 }
 
-func (p *PrimaryRepository) AddIndefiniteVehicle(OID int32, providerID int32) (int32, error) {
+func (p *PrimaryRepository) AddIndefiniteVehicle(OID uint32, providerID int32) (int32, error) {
 	return p.Source.AddVehicle(types.Vehicle{
 		IMEI:               int64(OID),
-		OID:                sql.NullInt32{Int32: OID, Valid: true},
+		OID:                sql.NullInt64{Int64: int64(OID), Valid: true},
 		LicensePlateNumber: sql.NullString{String: "", Valid: false},
 		ProviderID:         providerID,
 		ModerationStatus:   types.ModerationStatusPending,
@@ -39,7 +39,7 @@ func (p *PrimaryRepository) AddIndefiniteVehicle(OID int32, providerID int32) (i
 	)
 }
 
-func (p *PrimaryRepository) UpdateVehicleOID(id int32, OID int32) error {
+func (p *PrimaryRepository) UpdateVehicleOID(id int32, OID uint32) error {
 	return p.Source.UpdateVehicleOID(id, OID)
 }
 

@@ -103,7 +103,7 @@ func isPartOf(a, b uint64) bool {
 	return false
 }
 
-func (domain *SavePacket) getVehicleIDByOID(OID int32, vehicles []types.Vehicle) (int32, error) {
+func (domain *SavePacket) getVehicleIDByOID(OID uint32, vehicles []types.Vehicle) (int32, error) {
 	isFound := false
 	var id int32 = 0
 
@@ -123,13 +123,13 @@ func (domain *SavePacket) getVehicleIDByOID(OID int32, vehicles []types.Vehicle)
 	return id, fmt.Errorf("не удалось определить IMEI")
 }
 
-func (domain *SavePacket) getVehicleIDByOIDAndProviderIDFromStorage(OID int32, providerID int32) (int32, error) {
+func (domain *SavePacket) getVehicleIDByOIDAndProviderIDFromStorage(OID uint32, providerID int32) (int32, error) {
 	vehicle, err := domain.PrimaryRepository.GetVehicleByOIDAndProviderID(OID, providerID)
 	return vehicle.ID, err
 }
 
 // TODO: убрать side effect в виде добавления нового транспорта в базу данных
-func (s *SavePacket) resolveVehicleID(OID int32, providerIP string) (int32, error) {
+func (s *SavePacket) resolveVehicleID(OID uint32, providerIP string) (int32, error) {
 	providerID, getProviderIDError := s.PrimaryRepository.GetProviderIDByIP(providerIP)
 	if getProviderIDError != nil {
 		return providerID, getProviderIDError
@@ -161,7 +161,7 @@ func (s *SavePacket) resolveModerationStatus(id int32) (types.ModerationStatus, 
 }
 
 func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
-	oid := int32(data.OID)
+	oid := data.OID
 
 	month := int(time.Now().UTC().Month())
 	if month < s.AddVehicleMovementMonthStart || month > s.AddVehicleMovementMonthEnd {

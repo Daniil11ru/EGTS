@@ -11,10 +11,10 @@ type PrimarySource interface {
 	GetAllProviders() ([]types.Provider, error)
 	GetVehicleByID(id int32) (types.Vehicle, error)
 	GetVehiclesByProviderIP(ip string) ([]types.Vehicle, error)
-	GetVehicleByOID(OID int32) (types.Vehicle, error)
-	GetVehicleByOIDAndProviderID(OID int32, providerID int32) (types.Vehicle, error)
+	GetVehicleByOID(OID uint32) (types.Vehicle, error)
+	GetVehicleByOIDAndProviderID(OID uint32, providerID int32) (types.Vehicle, error)
 	AddVehicle(v types.Vehicle) (int32, error)
-	UpdateVehicleOID(id int32, OID int32) error
+	UpdateVehicleOID(id int32, OID uint32) error
 	GetProviderByIP(ip string) (types.Provider, error)
 	GetAllIPs() ([]string, error)
 	AddVehicleMovement(message interface{ ToBytes() ([]byte, error) }, vehicleID int) (int32, error)

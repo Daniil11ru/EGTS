@@ -160,7 +160,7 @@ func (p *PrimarySource) GetVehicleByID(id int32) (types.Vehicle, error) {
 	return v, nil
 }
 
-func (p *PrimarySource) GetVehicleByOID(oid int32) (types.Vehicle, error) {
+func (p *PrimarySource) GetVehicleByOID(oid uint32) (types.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
 		return types.Vehicle{}, err
@@ -208,7 +208,7 @@ func (p *PrimarySource) GetVehicleByOID(oid int32) (types.Vehicle, error) {
 	}
 }
 
-func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid int32, providerID int32) (types.Vehicle, error) {
+func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid uint32, providerID int32) (types.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
 		return types.Vehicle{}, err
@@ -275,7 +275,7 @@ func (p *PrimarySource) AddVehicle(v types.Vehicle) (int32, error) {
 	return id, nil
 }
 
-func (p *PrimarySource) UpdateVehicleOID(id int32, oid int32) error {
+func (p *PrimarySource) UpdateVehicleOID(id int32, oid uint32) error {
 	db, err := p.db()
 	if err != nil {
 		return err

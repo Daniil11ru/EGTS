@@ -31,7 +31,7 @@ func (ms ModerationStatus) Value() (driver.Value, error) {
 type Vehicle struct {
 	ID                 int32
 	IMEI               int64
-	OID                sql.NullInt32
+	OID                sql.NullInt64
 	LicensePlateNumber sql.NullString
 	ProviderID         int32
 	ModerationStatus   ModerationStatus
