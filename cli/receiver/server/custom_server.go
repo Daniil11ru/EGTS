@@ -248,19 +248,20 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 			case *egts.SrPosData:
 				log.Debug("Разбор подзаписи EGTS_SR_POS_DATA")
 				isPkgSave = true
-				exportPacket.NavigationTimestamp = subRecData.NavigationTime.Unix()
+				exportPacket.SentTimestamp = subRecData.NavigationTime.Unix()
 				exportPacket.ReceivedTimestamp = receivedTimestamp
 				exportPacket.Latitude = subRecData.Latitude
 				exportPacket.Longitude = subRecData.Longitude
+				exportPacket.Altitude = subRecData.Altitude
 				exportPacket.Speed = subRecData.Speed
-				exportPacket.Course = subRecData.Direction
+				exportPacket.Direction = subRecData.Direction
 			case *egts.SrExtPosData:
 				log.Debug("Разбор подзаписи EGTS_SR_EXT_POS_DATA")
-				exportPacket.Nsat = subRecData.Satellites
-				exportPacket.Pdop = subRecData.PositionDilutionOfPrecision
-				exportPacket.Hdop = subRecData.HorizontalDilutionOfPrecision
-				exportPacket.Vdop = subRecData.VerticalDilutionOfPrecision
-				exportPacket.Ns = subRecData.NavigationSystem
+				exportPacket.SatelliteCount = subRecData.Satellites
+				exportPacket.PDOP = subRecData.PositionDilutionOfPrecision
+				exportPacket.HDOP = subRecData.HorizontalDilutionOfPrecision
+				exportPacket.VDOP = subRecData.VerticalDilutionOfPrecision
+				exportPacket.NavigationSystem = subRecData.NavigationSystem
 			default:
 				log.Warnf("Неподдерживаемая подзапись SRT=%d в записи RN=%d",
 					subRec.SubrecordType, rec.RecordNumber)
@@ -277,7 +278,7 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 			},
 		})
 
-		exportPacket.Client = client
+		exportPacket.OID = client
 		if isPkgSave && recStatus == egtsPcOk {
 			IP, getIPFromIPAndPortErr := s.getIPFromIPAndPort(conn.RemoteAddr().String())
 			if getIPFromIPAndPortErr != nil {

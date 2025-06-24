@@ -202,52 +202,24 @@ func (s *Server) handleConn(conn net.Conn) {
 						log.Debugf("Разбор подзаписи EGTS_SR_POS_DATA")
 						isPkgSave = true
 
-						exportPacket.NavigationTimestamp = subRecData.NavigationTime.Unix()
+						exportPacket.SentTimestamp = subRecData.NavigationTime.Unix()
 						exportPacket.ReceivedTimestamp = receivedTimestamp
 						exportPacket.Latitude = subRecData.Latitude
 						exportPacket.Longitude = subRecData.Longitude
 						exportPacket.Speed = subRecData.Speed
-						exportPacket.Course = subRecData.Direction
+						exportPacket.Direction = subRecData.Direction
 					case *egts.SrExtPosData:
 						log.Debug("Разбор подзаписи EGTS_SR_EXT_POS_DATA")
-						exportPacket.Nsat = subRecData.Satellites
-						exportPacket.Pdop = subRecData.PositionDilutionOfPrecision
-						exportPacket.Hdop = subRecData.HorizontalDilutionOfPrecision
-						exportPacket.Vdop = subRecData.VerticalDilutionOfPrecision
-						exportPacket.Ns = subRecData.NavigationSystem
+						exportPacket.SatelliteCount = subRecData.Satellites
+						exportPacket.PDOP = subRecData.PositionDilutionOfPrecision
+						exportPacket.HDOP = subRecData.HorizontalDilutionOfPrecision
+						exportPacket.VDOP = subRecData.VerticalDilutionOfPrecision
+						exportPacket.NavigationSystem = subRecData.NavigationSystem
 
 					case *egts.SrAdSensorsData:
-						log.Debug("Разбор подзаписи EGTS_SR_AD_SENSORS_DATA")
-						if subRecData.AnalogSensorFieldExists1 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 1, Value: subRecData.AnalogSensor1})
-						}
-
-						if subRecData.AnalogSensorFieldExists2 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 2, Value: subRecData.AnalogSensor2})
-						}
-
-						if subRecData.AnalogSensorFieldExists3 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 3, Value: subRecData.AnalogSensor3})
-						}
-						if subRecData.AnalogSensorFieldExists4 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 4, Value: subRecData.AnalogSensor4})
-						}
-						if subRecData.AnalogSensorFieldExists5 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 5, Value: subRecData.AnalogSensor5})
-						}
-						if subRecData.AnalogSensorFieldExists6 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 6, Value: subRecData.AnalogSensor6})
-						}
-						if subRecData.AnalogSensorFieldExists7 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 7, Value: subRecData.AnalogSensor7})
-						}
-						if subRecData.AnalogSensorFieldExists8 == "1" {
-							exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: 8, Value: subRecData.AnalogSensor8})
-						}
+						log.Debug("Встречена подзапись EGTS_SR_AD_SENSORS_DATA")
 					case *egts.SrAbsAnSensData:
-						log.Debug("Разбор подзаписи EGTS_SR_ABS_AN_SENS_DATA")
-						exportPacket.AnSensors = append(exportPacket.AnSensors, packet.AnSensor{SensorNumber: subRecData.SensorNumber, Value: subRecData.Value})
-
+						log.Debug("Встречена подзапись EGTS_SR_ABS_AN_SENS_DATA")
 					case *egts.SrAbsCntrData:
 						log.Debug("Разбор подзаписи EGTS_SR_ABS_CNTR_DATA")
 
@@ -270,24 +242,11 @@ func (s *Server) handleConn(conn net.Conn) {
 							exportPacket.PacketID = binary.LittleEndian.Uint32(packetIDBytes)
 						}
 					case *egts.SrLiquidLevelSensor:
-						log.Debug("Разбор подзаписи EGTS_SR_LIQUID_LEVEL_SENSOR")
-						sensorData := packet.LiquidSensor{
-							SensorNumber: subRecData.LiquidLevelSensorNumber,
-							ErrorFlag:    subRecData.LiquidLevelSensorErrorFlag,
-						}
-
-						switch subRecData.LiquidLevelSensorValueUnit {
-						case "00", "01":
-							sensorData.ValueMm = subRecData.LiquidLevelSensorData
-						case "10":
-							sensorData.ValueL = subRecData.LiquidLevelSensorData * 10
-						}
-
-						exportPacket.LiquidSensors = append(exportPacket.LiquidSensors, sensorData)
+						log.Debug("Встречена подзапись EGTS_SR_LIQUID_LEVEL_SENSOR")
 					}
 				}
 
-				exportPacket.Client = client
+				exportPacket.OID = client
 				if isPkgSave {
 					pkt := exportPacket
 					ip := conn.RemoteAddr().String()

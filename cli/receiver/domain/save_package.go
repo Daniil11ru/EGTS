@@ -139,7 +139,7 @@ func (s *SavePackage) resolveModerationStatus(id int32) (source.ModerationStatus
 }
 
 func (s *SavePackage) Run(data *util.NavRecord, providerIP string) error {
-	oid := int32(data.Client)
+	oid := int32(data.OID)
 
 	month := int(time.Now().UTC().Month())
 	if month < s.AddVehicleMovementMonthStart || month > s.AddVehicleMovementMonthEnd {
