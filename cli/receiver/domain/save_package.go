@@ -30,8 +30,6 @@ func (domain *SavePacket) Initialize() error {
 
 	for i := 0; i < len(vehicles); i++ {
 		lastPosition, getLastPositionErr := domain.PrimaryRepository.GetLastVehiclePosition(vehicles[i].ID)
-		logrus.Debug(lastPosition)
-		logrus.Debug(vehicles[i].ID)
 		if getLastPositionErr == nil {
 			domain.vehicleIDToLastPosition[vehicles[i].ID] = lastPosition
 		}
