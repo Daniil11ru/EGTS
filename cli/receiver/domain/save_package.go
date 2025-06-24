@@ -40,8 +40,12 @@ func (domain *SavePacket) Initialize() error {
 
 func isPrefixBytes(a, b uint64, n int) bool {
 	width := (bits.Len64(b) + 7) / 8
+	if n >= width {
+		return a == b
+	}
 	shift := uint((width - n) * 8)
-	return a == b>>shift
+	mask := uint64(1)<<(uint(n)*8) - 1
+	return a == (b>>shift)&mask
 }
 
 func isSuffixBytes(a, b uint64, n int) bool {
@@ -112,6 +116,7 @@ func (domain *SavePacket) getVehicleIDByOID(OID uint32, vehicles []types.Vehicle
 
 		if isPartOf(uint64(OID), uint64(IMEI)) {
 			if !isFound {
+				isFound = true
 				id = v.ID
 			} else {
 				id = 0
@@ -120,6 +125,9 @@ func (domain *SavePacket) getVehicleIDByOID(OID uint32, vehicles []types.Vehicle
 		}
 	}
 
+	if isFound {
+		return id, nil
+	}
 	return id, fmt.Errorf("не удалось определить IMEI")
 }
 
