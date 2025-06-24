@@ -189,7 +189,15 @@ func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
 	lastPosition, OK := s.vehicleIDToLastPosition[vehicleID]
 	if OK {
 		accuracy_meters := 10.0
-		if lastPosition.EqualsTo(&currentPosition, accuracy_meters) {
+
+		equals := false
+		if currentPosition.Altitude == 0 || lastPosition.Altitude == 0 {
+			equals = lastPosition.EqualsHorizontallyTo(&currentPosition, accuracy_meters)
+		} else {
+			equals = lastPosition.EqualsTo(&currentPosition, accuracy_meters)
+		}
+
+		if equals {
 			logrus.Debugf("Новое местоположение транспорта с ID %d не отличается от предыдущего", vehicleID)
 			return nil
 		}

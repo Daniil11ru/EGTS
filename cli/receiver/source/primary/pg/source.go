@@ -397,7 +397,10 @@ func (p *PrimarySource) GetLastVehiclePosition(vehicleID int32) (types.Position,
 			data->>'altitude'
 		FROM vehicle_movement
 		WHERE vehicle_id = $1
-		ORDER BY (data->>'sent_unix_time')::bigint DESC
+			AND data ? 'sent_unix_time'
+			AND data ? 'latitude'
+			AND data ? 'longitude'
+		ORDER BY (data->>'sent_unix_time')::bigint DESC NULLS LAST
 		LIMIT 1
 	`
 	var latStr, lonStr, altStr sql.NullString
