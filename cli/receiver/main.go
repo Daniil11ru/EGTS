@@ -85,6 +85,6 @@ func main() {
 
 	defer connector.Close()
 
-	srv := server.NewCustom(cfg.GetListenAddress(), cfg.GetEmptyConnTTL(), &savePacket, getIPWhiteList)
+	srv := server.New(cfg.GetListenAddress(), cfg.GetEmptyConnectionTTL(), &savePacket, getIPWhiteList)
 	srv.Run()
 }

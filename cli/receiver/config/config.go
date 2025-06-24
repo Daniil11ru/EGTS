@@ -21,7 +21,7 @@ type Settings struct {
 	SaveTelematicsDataMonthEnd   int               `yaml:"save_telematics_data_month_end"`
 }
 
-func (s *Settings) GetEmptyConnTTL() time.Duration {
+func (s *Settings) GetEmptyConnectionTTL() time.Duration {
 	return time.Duration(s.ConnTTL) * time.Second
 }
 func (s *Settings) GetListenAddress() string {

@@ -2,11 +2,13 @@ package server
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
+	"regexp"
 	"time"
 
-	domain "github.com/daniil11ru/egts/cli/receiver/domain"
+	"github.com/daniil11ru/egts/cli/receiver/domain"
 	packet "github.com/daniil11ru/egts/cli/receiver/repository/util"
 	"github.com/daniil11ru/egts/libs/egts"
 	log "github.com/sirupsen/logrus"
@@ -20,270 +22,302 @@ const (
 )
 
 type Server struct {
-	addr        string
-	ttl         time.Duration
-	savePackage *domain.SavePacket
-	l           net.Listener
+	Address        string
+	TTL            time.Duration
+	SavePackage    *domain.SavePacket
+	Listener       net.Listener
+	GetIPWhiteList domain.GetIPWhiteList
 }
 
-func (s *Server) Run() {
-	var err error
+func New(addr string, ttl time.Duration, savePackage *domain.SavePacket, getIPWhiteList domain.GetIPWhiteList) *Server {
+	return &Server{Address: addr, TTL: ttl, SavePackage: savePackage, GetIPWhiteList: getIPWhiteList}
+}
 
-	s.l, err = net.Listen("tcp", s.addr)
+func (server *Server) getIPFromIPAndPort(ipAndPort string) (string, error) {
+	var re = regexp.MustCompile(`^((?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}):(\d{1,5})$`)
+	matches := re.FindStringSubmatch(ipAndPort)
+	if matches == nil {
+		return "", fmt.Errorf("не удалось получить IP-адрес")
+	}
+
+	return matches[1], nil
+}
+
+func (server *Server) Run() {
+	var err error
+	server.Listener, err = net.Listen("tcp", server.Address)
 	if err != nil {
 		log.Fatalf("Не удалось открыть соединение: %v", err)
 	}
-	defer s.l.Close()
+	defer server.Listener.Close()
 
-	log.Infof("Запущен сервер %s", s.addr)
+	log.WithField("addr", server.Address).Info("Запущен сервер")
+	log.Debug("TTL: ", server.TTL)
+
+	whiteList, err := server.GetIPWhiteList.Run()
+	if err != nil || len(whiteList) == 0 {
+		log.Error("Не удалось получить белый список IP")
+		return
+	}
+	log.Debug("Белый список IP: ", whiteList)
+
 	for {
-		conn, err := s.l.Accept()
-		if err != nil {
-			log.WithField("err", err).Errorf("Ошибка соединения")
-		} else {
-			go s.handleConn(conn)
+		conn, err := server.Listener.Accept()
+
+		IP, getIpFromIPAndPortErr := server.getIPFromIPAndPort(conn.RemoteAddr().String())
+		if getIpFromIPAndPortErr != nil {
+			log.Warn("Адрес отправителя не является IP-адресом")
+			continue
 		}
+
+		isInWhiteList := false
+		for i := 0; i < len(whiteList); i++ {
+			if whiteList[i] == IP {
+				isInWhiteList = true
+				break
+			}
+		}
+		if !isInWhiteList {
+			log.Warnf("IP %s не находится в белом списке", conn.RemoteAddr().String())
+			continue
+		}
+
+		if err != nil {
+			log.WithField("err", err).Error("Ошибка соединения")
+			continue
+		}
+
+		go server.handleConnection(conn)
 	}
 }
 
-func (s *Server) Stop() error {
-	if s.l != nil {
-		return s.l.Close()
-	}
+func (s *Server) handleConnection(connection net.Conn) {
+	defer connection.Close()
 
-	return nil
-}
-
-func (s *Server) handleConn(conn net.Conn) {
-	defer conn.Close()
-
-	var (
-		isPkgSave         bool
-		srResultCodePkg   []byte
-		serviceType       uint8
-		srResponsesRecord egts.RecordDataSet
-		recvPacket        []byte
-		client            uint32
-	)
-
-	log.WithField("ip", conn.RemoteAddr()).Info("Установлено соединение")
-
-	log.Debug("TTL: ", s.ttl)
+	log.WithField("ip", connection.RemoteAddr()).Info("Установлено соединение")
 
 	for {
-	Received:
-		serviceType = 0
-		srResponsesRecord = nil
-		srResultCodePkg = nil
-		recvPacket = nil
-
-		if s.ttl > 0 {
-			_ = conn.SetReadDeadline(time.Now().Add(s.ttl))
-		} else {
-			_ = conn.SetReadDeadline(time.Time{})
-		}
-
-		// считываем заголовок пакета
-		headerBuf := make([]byte, headerLen)
-		_, err := io.ReadFull(conn, headerBuf)
+		packet, err := s.readPacket(connection)
 		if err != nil {
-			if ne, ok := err.(net.Error); ok && ne.Timeout() {
-				log.WithField("ip", conn.RemoteAddr()).Warn("Таймаут чтения")
-			} else if err == io.EOF {
-				log.WithField("ip", conn.RemoteAddr()).Info("Клиент закрыл соединение")
-			} else {
-				log.WithField("err", err).Error("Ошибка при получении")
-			}
-			_ = conn.SetDeadline(time.Time{})
 			return
 		}
 
-		// Закрываем соединение, если пакет не формата EGTS
-		if headerBuf[0] != 0x01 {
-			log.WithField("ip", conn.RemoteAddr()).Warn("Пакет не соответствует формату EGTS")
-			_ = conn.SetDeadline(time.Time{})
-			return
-		}
-
-		// вычисляем длину пакета, равную длине заголовка (HL) + длина тела (FDL) + CRC пакета 2 байта если есть FDL из приказа минтранса №285
-		bodyLen := binary.LittleEndian.Uint16(headerBuf[5:7])
-		pkgLen := uint16(headerBuf[3])
-		if bodyLen > 0 {
-			pkgLen += bodyLen + 2
-		}
-
-		if s.ttl > 0 {
-			_ = conn.SetReadDeadline(time.Now().Add(s.ttl))
-		} else {
-			_ = conn.SetReadDeadline(time.Time{})
-		}
-
-		// получаем концовку ЕГТС пакета
-		buf := make([]byte, pkgLen-headerLen)
-		if _, err := io.ReadFull(conn, buf); err != nil {
-			if ne, ok := err.(net.Error); ok && ne.Timeout() {
-				log.WithField("ip", conn.RemoteAddr()).Warn("Таймаут чтения")
-			} else {
-				log.WithField("err", err).Error("Ошибка при получении тела пакета")
-			}
-			_ = conn.SetDeadline(time.Time{})
-			return
-		}
-
-		// формируем полный пакет
-		recvPacket = append(headerBuf, buf...)
-		_ = conn.SetReadDeadline(time.Time{})
-
-		log.WithField("packet", recvPacket).Debug("Принят пакет")
-		pkg := egts.Package{}
-		receivedTimestamp := time.Now().UTC().Unix()
-		resultCode, err := pkg.Decode(recvPacket)
+		pkg, receivedTimestamp, resultCode, err := s.decodePacket(packet)
 		if err != nil {
-			log.WithField("err", err).Error("Ошибка расшифровки пакета")
-
-			resp, err := createPtResponse(pkg.PacketIdentifier, resultCode, serviceType, nil)
-			if err != nil {
-				log.WithField("err", err).Error("Ошибка сборки ответа EGTS_PT_RESPONSE с ошибкой")
-				goto Received
-			}
-			_, _ = conn.Write(resp)
-
-			goto Received
+			s.sendDecodeError(connection, pkg.PacketIdentifier, resultCode)
+			continue
 		}
 
 		switch pkg.PacketType {
 		case egts.PtAppdataPacket:
-			log.Debug("Тип пакета EGTS_PT_APPDATA")
-
-			for _, rec := range *pkg.ServicesFrameData.(*egts.ServiceDataSet) {
-				exportPacket := packet.NavigationRecord{
-					PacketID: uint32(pkg.PacketIdentifier),
-				}
-
-				isPkgSave = false
-				packetIDBytes := make([]byte, 4)
-
-				srResponsesRecord = append(srResponsesRecord, egts.RecordData{
-					SubrecordType:   egts.SrRecordResponseType,
-					SubrecordLength: 3,
-					SubrecordData: &egts.SrResponse{
-						ConfirmedRecordNumber: rec.RecordNumber,
-						RecordStatus:          egtsPcOk,
-					},
-				})
-				serviceType = rec.SourceServiceType
-				log.Info("Тип сервиса ", serviceType)
-
-				// если в секции с данными есть oid, то обновляем его
-				if rec.ObjectIDFieldExists == "1" {
-					client = rec.ObjectIdentifier
-				}
-
-				for _, subRec := range rec.RecordDataSet {
-					switch subRecData := subRec.SubrecordData.(type) {
-					case *egts.SrTermIdentity:
-						log.Debug("Разбор подзаписи EGTS_SR_TERM_IDENTITY")
-
-						// на случай если секция с данными не содержит oid
-						client = subRecData.TerminalIdentifier
-
-						if srResultCodePkg, err = createSrResultCode(pkg.PacketIdentifier, egtsPcOk); err != nil {
-							log.Errorf("Ошибка сборки EGTS_SR_RESULT_CODE: %v", err)
-						}
-					case *egts.SrAuthInfo:
-						log.Debug("Разбор подзаписи EGTS_SR_AUTH_INFO")
-						if srResultCodePkg, err = createSrResultCode(pkg.PacketIdentifier, egtsPcOk); err != nil {
-							log.Errorf("Ошибка сборки EGTS_SR_RESULT_CODE: %v", err)
-						}
-					case *egts.SrResponse:
-						log.Debugf("Разбор подзаписи EGTS_SR_RESPONSE")
-						goto Received
-					case *egts.SrPosData:
-						log.Debugf("Разбор подзаписи EGTS_SR_POS_DATA")
-						isPkgSave = true
-
-						exportPacket.SentTimestamp = subRecData.NavigationTime.Unix()
-						exportPacket.ReceivedTimestamp = receivedTimestamp
-						exportPacket.Latitude = subRecData.Latitude
-						exportPacket.Longitude = subRecData.Longitude
-						exportPacket.Speed = subRecData.Speed
-						exportPacket.Direction = subRecData.Direction
-					case *egts.SrExtPosData:
-						log.Debug("Разбор подзаписи EGTS_SR_EXT_POS_DATA")
-						exportPacket.SatelliteCount = subRecData.Satellites
-						exportPacket.PDOP = subRecData.PositionDilutionOfPrecision
-						exportPacket.HDOP = subRecData.HorizontalDilutionOfPrecision
-						exportPacket.VDOP = subRecData.VerticalDilutionOfPrecision
-						exportPacket.NavigationSystem = subRecData.NavigationSystem
-
-					case *egts.SrAdSensorsData:
-						log.Debug("Встречена подзапись EGTS_SR_AD_SENSORS_DATA")
-					case *egts.SrAbsAnSensData:
-						log.Debug("Встречена подзапись EGTS_SR_ABS_AN_SENS_DATA")
-					case *egts.SrAbsCntrData:
-						log.Debug("Разбор подзаписи EGTS_SR_ABS_CNTR_DATA")
-
-						switch subRecData.CounterNumber {
-						case 110:
-							// Три младших байта номера передаваемой записи (идет вместе с каждой POS_DATA).
-							binary.BigEndian.PutUint32(packetIDBytes, subRecData.CounterValue)
-							exportPacket.PacketID = subRecData.CounterValue
-						case 111:
-							// один старший байт номера передаваемой записи (идет вместе с каждой POS_DATA).
-							tmpBuf := make([]byte, 4)
-							binary.BigEndian.PutUint32(tmpBuf, subRecData.CounterValue)
-
-							if len(packetIDBytes) == 4 {
-								packetIDBytes[3] = tmpBuf[3]
-							} else {
-								packetIDBytes = tmpBuf
-							}
-
-							exportPacket.PacketID = binary.LittleEndian.Uint32(packetIDBytes)
-						}
-					case *egts.SrLiquidLevelSensor:
-						log.Debug("Встречена подзапись EGTS_SR_LIQUID_LEVEL_SENSOR")
-					}
-				}
-
-				exportPacket.OID = client
-				if isPkgSave {
-					pkt := exportPacket
-					ip := conn.RemoteAddr().String()
-					go func() {
-						if err := s.savePackage.Run(&pkt, ip); err != nil {
-							log.Warnf("Телематические данные не были сохранены: %v", err)
-						}
-					}()
-				}
-			}
-
-			resp, err := createPtResponse(pkg.PacketIdentifier, resultCode, serviceType, srResponsesRecord)
-			if err != nil {
-				log.WithField("err", err).Error("Ошибка сборки ответа")
-				goto Received
-			}
-			_, _ = conn.Write(resp)
-
-			log.WithField("packet", resp).Debug("Отправлен пакет EGTS_PT_RESPONSE")
-
-			if len(srResultCodePkg) > 0 {
-				_, _ = conn.Write(srResultCodePkg)
-				log.WithField("packet", resp).Debug("Отправлен пакет EGTS_SR_RESULT_CODE")
+			if err := s.handleAppData(connection, pkg, receivedTimestamp, resultCode); err != nil {
+				continue
 			}
 		case egts.PtResponsePacket:
 			log.Debug("Тип пакета EGTS_PT_RESPONSE")
 		}
-
 	}
 }
 
-func New(srvAddress string, ttl time.Duration, savePackage *domain.SavePacket) Server {
-	return Server{
-		addr:        srvAddress,
-		ttl:         ttl,
-		savePackage: savePackage,
+func (s *Server) readPacket(conn net.Conn) ([]byte, error) {
+	if s.TTL > 0 {
+		_ = conn.SetReadDeadline(time.Now().Add(s.TTL))
+	} else {
+		_ = conn.SetReadDeadline(time.Time{})
 	}
+
+	headerBuf := make([]byte, headerLen)
+	_, err := io.ReadFull(conn, headerBuf)
+	if err != nil {
+		if ne, ok := err.(net.Error); ok && ne.Timeout() {
+			log.WithField("ip", conn.RemoteAddr()).Warn("Таймаут чтения")
+		} else if err == io.EOF {
+			log.WithField("ip", conn.RemoteAddr()).Info("Клиент закрыл соединение")
+		} else {
+			log.WithField("err", err).Error("Ошибка при получении")
+		}
+		_ = conn.SetDeadline(time.Time{})
+		return nil, err
+	}
+
+	if headerBuf[0] != 0x01 {
+		log.WithField("ip", conn.RemoteAddr()).Warn("Пакет не соответствует формату EGTS")
+		_ = conn.SetDeadline(time.Time{})
+		return nil, fmt.Errorf("invalid EGTS packet")
+	}
+
+	bodyLen := binary.LittleEndian.Uint16(headerBuf[5:7])
+	pkgLen := uint16(headerBuf[3])
+	if bodyLen > 0 {
+		pkgLen += bodyLen + 2
+	}
+
+	if s.TTL > 0 {
+		_ = conn.SetReadDeadline(time.Now().Add(s.TTL))
+	} else {
+		_ = conn.SetReadDeadline(time.Time{})
+	}
+
+	buf := make([]byte, pkgLen-headerLen)
+	if _, err := io.ReadFull(conn, buf); err != nil {
+		if ne, ok := err.(net.Error); ok && ne.Timeout() {
+			log.WithField("ip", conn.RemoteAddr()).Warn("Таймаут чтения")
+		} else {
+			log.WithField("err", err).Error("Ошибка при получении тела пакета")
+		}
+		_ = conn.SetDeadline(time.Time{})
+		return nil, err
+	}
+
+	_ = conn.SetReadDeadline(time.Time{})
+	packet := append(headerBuf, buf...)
+	log.Debug("Принят пакет")
+	return packet, nil
+}
+
+func (s *Server) decodePacket(packet []byte) (*egts.Package, int64, uint8, error) {
+	pkg := egts.Package{}
+	receivedTimestamp := time.Now().UTC().Unix()
+	resultCode, err := pkg.Decode(packet)
+	return &pkg, receivedTimestamp, resultCode, err
+}
+
+func (s *Server) sendDecodeError(conn net.Conn, packetIdentifier uint16, resultCode uint8) {
+	resp, err := createPtResponse(packetIdentifier, resultCode, 0, nil)
+	if err != nil {
+		log.WithField("err", err).Error("Ошибка сборки ответа EGTS_PT_RESPONSE с ошибкой")
+		return
+	}
+	_, _ = conn.Write(resp)
+}
+
+func (s *Server) handleAppData(conn net.Conn, pkg *egts.Package, receivedTimestamp int64, resultCode uint8) error {
+	var (
+		srResponsesRecord egts.RecordDataSet
+		srResultCodePkg   []byte
+		serviceType       uint8
+		client            uint32
+	)
+
+	for _, rec := range *pkg.ServicesFrameData.(*egts.ServiceDataSet) {
+		exportPacket := packet.NavigationRecord{
+			PacketID: uint32(pkg.PacketIdentifier),
+		}
+
+		// TODO: узнать, нужно ли проверять Recipient Service Type
+		serviceType = rec.SourceServiceType
+		log.Debug("Тип сервиса: ", serviceType)
+
+		if serviceType != 2 {
+			log.Warn("Неподдерживаемый сервис")
+			srResponsesRecord = append(srResponsesRecord, egts.RecordData{
+				SubrecordType:   egts.SrRecordResponseType,
+				SubrecordLength: 3,
+				SubrecordData: &egts.SrResponse{
+					ConfirmedRecordNumber: rec.RecordNumber,
+					RecordStatus:          egtsPcSrvcDenied,
+				},
+			})
+
+			continue
+		}
+
+		if rec.ObjectIDFieldExists == "1" {
+			client = rec.ObjectIdentifier
+		}
+
+		var (
+			recStatus uint8 = egtsPcOk
+			isPkgSave bool  = false
+		)
+
+		for _, subRec := range rec.RecordDataSet {
+			switch subRecData := subRec.SubrecordData.(type) {
+			case *egts.SrResponse:
+				log.Debug("Встречена подзапись EGTS_SR_RESPONSE")
+			case *egts.SrAdSensorsData:
+				log.Debug("Встречена подзапись EGTS_SR_AD_SENSORS_DATA")
+			case *egts.SrCountersData:
+				log.Debug("Встречена подзапись EGTS_SR_COUNTERS_DATA")
+			case *egts.SrStateData:
+				log.Debug("Встречена подзапись EGTS_SR_STATE_DATA")
+			case *egts.SrAbsAnSensData:
+				log.Debug("Встречена подзапись EGTS_SR_ABS_AN_SENS_DATA")
+			case *egts.SrAbsCntrData:
+				log.Debug("Встречена подзапись EGTS_SR_ABS_CNTR_DATA")
+			case *egts.SrLiquidLevelSensor:
+				log.Debug("Встречена подзапись EGTS_SR_LIQUID_LEVEL_SENSOR")
+			case *egts.SrPassengersCountersData:
+				log.Debug("Встречена подзапись EGTS_SR_PASSENGERS_COUNTERS_DATA")
+			case *egts.SrLoopinData:
+				log.Debug("Встречена подзапись EGTS_SR_LOOPIN_DATA")
+			case *egts.SrAbsDigSensData:
+				log.Debug("Встречена подзапись EGTS_SR_ABS_DIG_SENS_DATA")
+			case *egts.SrAbsLoopinData:
+				log.Debug("Встречена подзапись EGTS_SR_ABS_LOOPIN_DATA")
+			case *egts.SrPosData:
+				log.Debug("Разбор подзаписи EGTS_SR_POS_DATA")
+				isPkgSave = true
+				exportPacket.SentTimestamp = subRecData.NavigationTime.Unix()
+				exportPacket.ReceivedTimestamp = receivedTimestamp
+				exportPacket.Latitude = subRecData.Latitude
+				exportPacket.Longitude = subRecData.Longitude
+				exportPacket.Altitude = subRecData.Altitude
+				exportPacket.Speed = subRecData.Speed
+				exportPacket.Direction = subRecData.Direction
+			case *egts.SrExtPosData:
+				log.Debug("Разбор подзаписи EGTS_SR_EXT_POS_DATA")
+				exportPacket.SatelliteCount = subRecData.Satellites
+				exportPacket.PDOP = subRecData.PositionDilutionOfPrecision
+				exportPacket.HDOP = subRecData.HorizontalDilutionOfPrecision
+				exportPacket.VDOP = subRecData.VerticalDilutionOfPrecision
+				exportPacket.NavigationSystem = subRecData.NavigationSystem
+			default:
+				log.Warnf("Неподдерживаемая подзапись SRT=%d в записи RN=%d",
+					subRec.SubrecordType, rec.RecordNumber)
+				recStatus = egtsPcUnsType
+			}
+		}
+
+		srResponsesRecord = append(srResponsesRecord, egts.RecordData{
+			SubrecordType:   egts.SrRecordResponseType,
+			SubrecordLength: 3,
+			SubrecordData: &egts.SrResponse{
+				ConfirmedRecordNumber: rec.RecordNumber,
+				RecordStatus:          recStatus,
+			},
+		})
+
+		exportPacket.OID = client
+		if isPkgSave && recStatus == egtsPcOk {
+			IP, getIPFromIPAndPortErr := s.getIPFromIPAndPort(conn.RemoteAddr().String())
+			if getIPFromIPAndPortErr != nil {
+				log.Warn("Адрес отправителя не является IP-адресом")
+			} else {
+				pkt := exportPacket
+				go func() {
+					if err := s.SavePackage.Run(&pkt, IP); err != nil {
+						log.Warnf("Телематические данные не были сохранены: %s", err)
+					}
+				}()
+			}
+		}
+	}
+
+	resp, err := createPtResponse(pkg.PacketIdentifier, resultCode, serviceType, srResponsesRecord)
+	if err != nil {
+		log.WithField("err", err).Error("Ошибка сборки ответа")
+		return err
+	}
+	_, _ = conn.Write(resp)
+	log.Debug("Отправлен пакет EGTS_PT_RESPONSE")
+
+	if len(srResultCodePkg) > 0 {
+		_, _ = conn.Write(srResultCodePkg)
+		log.Debug("Отправлен пакет EGTS_SR_RESULT_CODE")
+	}
+
+	return nil
 }
 
 func createPtResponse(pid uint16, resultCode, serviceType uint8, srResponses egts.RecordDataSet) ([]byte, error) {
@@ -325,53 +359,6 @@ func createPtResponse(pid uint16, resultCode, serviceType uint8, srResponses egt
 		PacketIdentifier:  pid + 1,
 		PacketType:        egts.PtResponsePacket,
 		ServicesFrameData: &respSection,
-	}
-
-	return respPkg.Encode()
-}
-
-func createSrResultCode(pid uint16, resultCode uint8) ([]byte, error) {
-	rds := egts.RecordDataSet{
-		egts.RecordData{
-			SubrecordType:   egts.SrResultCodeType,
-			SubrecordLength: uint16(1),
-			SubrecordData: &egts.SrResultCode{
-				ResultCode: resultCode,
-			},
-		},
-	}
-
-	sfd := egts.ServiceDataSet{
-		egts.ServiceDataRecord{
-			RecordLength:             rds.Length(),
-			RecordNumber:             1,
-			SourceServiceOnDevice:    "0",
-			RecipientServiceOnDevice: "0",
-			Group:                    "1",
-			RecordProcessingPriority: "00",
-			TimeFieldExists:          "0",
-			EventIDFieldExists:       "0",
-			ObjectIDFieldExists:      "0",
-			SourceServiceType:        egts.AuthService,
-			RecipientServiceType:     egts.AuthService,
-			RecordDataSet:            rds,
-		},
-	}
-
-	respPkg := egts.Package{
-		ProtocolVersion:   1,
-		SecurityKeyID:     0,
-		Prefix:            "00",
-		Route:             "0",
-		EncryptionAlg:     "00",
-		Compression:       "0",
-		Priority:          "00",
-		HeaderLength:      11,
-		HeaderEncoding:    0,
-		FrameDataLength:   sfd.Length(),
-		PacketIdentifier:  pid + 1,
-		PacketType:        egts.PtResponsePacket,
-		ServicesFrameData: &sfd,
 	}
 
 	return respPkg.Encode()
