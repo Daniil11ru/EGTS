@@ -75,7 +75,7 @@ func main() {
 
 	primaryRepository := repository.PrimaryRepository{Source: &primarySource}
 
-	savePacket := domain.SavePackage{
+	savePacket := domain.SavePacket{
 		PrimaryRepository:            primaryRepository,
 		AddVehicleMovementMonthStart: cfg.GetSaveTelematicsDataMonthStart(),
 		AddVehicleMovementMonthEnd:   cfg.GetSaveTelematicsDataMonthEnd(),

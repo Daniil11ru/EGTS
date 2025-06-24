@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type SavePackage struct {
+type SavePacket struct {
 	PrimaryRepository repository.PrimaryRepository
 
 	AddVehicleMovementMonthStart int
@@ -20,7 +20,7 @@ type SavePackage struct {
 	vehicleIDToLastPosition map[int32]types.Position
 }
 
-func (domain *SavePackage) Initialize() error {
+func (domain *SavePacket) Initialize() error {
 	domain.vehicleIDToLastPosition = make(map[int32]types.Position)
 
 	vehicles, getAllVehiclesErr := domain.PrimaryRepository.GetAllVehicles()
@@ -30,6 +30,8 @@ func (domain *SavePackage) Initialize() error {
 
 	for i := 0; i < len(vehicles); i++ {
 		lastPosition, getLastPositionErr := domain.PrimaryRepository.GetLastVehiclePosition(vehicles[i].ID)
+		logrus.Debug(lastPosition)
+		logrus.Debug(vehicles[i].ID)
 		if getLastPositionErr == nil {
 			domain.vehicleIDToLastPosition[vehicles[i].ID] = lastPosition
 		}
@@ -103,7 +105,7 @@ func isPartOf(a, b uint64) bool {
 	return false
 }
 
-func (domain *SavePackage) getVehicleIDByOID(OID int32, vehicles []types.Vehicle) (int32, error) {
+func (domain *SavePacket) getVehicleIDByOID(OID int32, vehicles []types.Vehicle) (int32, error) {
 	isFound := false
 	var id int32 = 0
 
@@ -123,12 +125,13 @@ func (domain *SavePackage) getVehicleIDByOID(OID int32, vehicles []types.Vehicle
 	return id, fmt.Errorf("не удалось определить IMEI")
 }
 
-func (domain *SavePackage) getVehicleIDByOIDAndProviderIDFromStorage(OID int32, providerID int32) (int32, error) {
+func (domain *SavePacket) getVehicleIDByOIDAndProviderIDFromStorage(OID int32, providerID int32) (int32, error) {
 	vehicle, err := domain.PrimaryRepository.GetVehicleByOIDAndProviderID(OID, providerID)
 	return vehicle.ID, err
 }
 
-func (s *SavePackage) resolveVehicleID(OID int32, providerIP string) (int32, error) {
+// TODO: убрать side effect в виде добавления нового транспорта в базу данных
+func (s *SavePacket) resolveVehicleID(OID int32, providerIP string) (int32, error) {
 	providerID, getProviderIDError := s.PrimaryRepository.GetProviderIDByIP(providerIP)
 	if getProviderIDError != nil {
 		return providerID, getProviderIDError
@@ -154,17 +157,17 @@ func (s *SavePackage) resolveVehicleID(OID int32, providerIP string) (int32, err
 	return id, nil
 }
 
-func (s *SavePackage) resolveModerationStatus(id int32) (types.ModerationStatus, error) {
+func (s *SavePacket) resolveModerationStatus(id int32) (types.ModerationStatus, error) {
 	moderationStatus, err := s.PrimaryRepository.GetVehicleModerationStatus(id)
 	return moderationStatus, err
 }
 
-func (s *SavePackage) Run(data *util.NavigationRecord, providerIP string) error {
+func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
 	oid := int32(data.OID)
 
 	month := int(time.Now().UTC().Month())
 	if month < s.AddVehicleMovementMonthStart || month > s.AddVehicleMovementMonthEnd {
-		logrus.Debug("запись телематических данных в текущий месяц запрещена")
+		logrus.Debug("Запись телематических данных в текущий месяц запрещена")
 		return nil
 	}
 
@@ -178,7 +181,7 @@ func (s *SavePackage) Run(data *util.NavigationRecord, providerIP string) error 
 		return fmt.Errorf("не удалось определить статус модерации транспорта с ID %d: %w", vehicleID, err)
 	}
 	if moderationStatus == types.ModerationStatusRejected {
-		logrus.Debugf("запись телематических данных для транспорта с ID %d запрещена", vehicleID)
+		logrus.Debugf("Запись телематических данных для транспорта с ID %d запрещена", vehicleID)
 		return nil
 	}
 
@@ -187,7 +190,7 @@ func (s *SavePackage) Run(data *util.NavigationRecord, providerIP string) error 
 	if OK {
 		accuracy_meters := 10.0
 		if lastPosition.EqualsTo(&currentPosition, accuracy_meters) {
-			logrus.Debugf("новое местоположение транспорта с ID %d не отличается от предыдущего", vehicleID)
+			logrus.Debugf("Новое местоположение транспорта с ID %d не отличается от предыдущего", vehicleID)
 			return nil
 		}
 	}

@@ -19,7 +19,7 @@ type CustomServer struct {
 	GetIPWhiteList domain.GetIPWhiteList
 }
 
-func NewCustom(addr string, ttl time.Duration, savePackage *domain.SavePackage, getIPWhiteList domain.GetIPWhiteList) *CustomServer {
+func NewCustom(addr string, ttl time.Duration, savePackage *domain.SavePacket, getIPWhiteList domain.GetIPWhiteList) *CustomServer {
 	return &CustomServer{Server: New(addr, ttl, savePackage), GetIPWhiteList: getIPWhiteList}
 }
 

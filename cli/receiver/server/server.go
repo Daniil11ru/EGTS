@@ -22,7 +22,7 @@ const (
 type Server struct {
 	addr        string
 	ttl         time.Duration
-	savePackage *domain.SavePackage
+	savePackage *domain.SavePacket
 	l           net.Listener
 }
 
@@ -278,7 +278,7 @@ func (s *Server) handleConn(conn net.Conn) {
 	}
 }
 
-func New(srvAddress string, ttl time.Duration, savePackage *domain.SavePackage) Server {
+func New(srvAddress string, ttl time.Duration, savePackage *domain.SavePacket) Server {
 	return Server{
 		addr:        srvAddress,
 		ttl:         ttl,

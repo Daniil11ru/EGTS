@@ -56,7 +56,7 @@ func main() {
 
 	flag.IntVar(&pid, "pid", 0, "Идентификатор пакета (обязательно)")
 	flag.IntVar(&oid, "oid", 0, "Идентификатор клиента (обязательно)")
-	flag.StringVar(&ts, "time", "", "Метка времени в формате RFC 3339 (обязательно)")
+	flag.StringVar(&ts, "time", "", "Метка времени в формате RFC 3339")
 	flag.IntVar(&liqLvl, "liquid", 0, "Уровень жидкости для первого датчика")
 	flag.Float64Var(&lat, "lat", 0, "Широта")
 	flag.Float64Var(&lon, "lon", 0, "Долгота")
@@ -76,14 +76,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	var timestamp time.Time
+	var err error
 	if ts == "" {
-		fmt.Println("Требуется метка времени, смотрите помощь (-h)")
-		os.Exit(1)
-	}
-	timestamp, err := time.Parse(time.RFC3339, ts)
-	if err != nil {
-		fmt.Println("Ошибка парсинга метки времени: ", timestamp)
-		os.Exit(1)
+		timestamp = time.Now()
+	} else {
+		timestamp, err := time.Parse(time.RFC3339, ts)
+		if err != nil {
+			fmt.Println("Ошибка парсинга метки времени: ", timestamp)
+			os.Exit(1)
+		}
 	}
 
 	authPkg := egts.Package{
@@ -155,7 +157,7 @@ func main() {
 					egts.RecordData{
 						SubrecordType: 16,
 						SubrecordData: &egts.SrPosData{
-							NavigationTime:      time.Date(2021, time.February, 20, 0, 30, 40, 0, time.UTC),
+							NavigationTime:      timestamp,
 							Latitude:            lat,
 							Longitude:           lon,
 							ALTE:                "1",
@@ -222,7 +224,7 @@ func main() {
 					egts.RecordData{
 						SubrecordType: 16,
 						SubrecordData: &egts.SrPosData{
-							NavigationTime:      time.Date(2021, time.February, 20, 0, 30, 40, 0, time.UTC),
+							NavigationTime:      timestamp,
 							Latitude:            lat,
 							Longitude:           lon,
 							ALTE:                "1",
