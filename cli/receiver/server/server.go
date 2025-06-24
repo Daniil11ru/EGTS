@@ -156,7 +156,7 @@ func (s *Server) handleConn(conn net.Conn) {
 			log.Debug("Тип пакета EGTS_PT_APPDATA")
 
 			for _, rec := range *pkg.ServicesFrameData.(*egts.ServiceDataSet) {
-				exportPacket := packet.NavRecord{
+				exportPacket := packet.NavigationRecord{
 					PacketID: uint32(pkg.PacketIdentifier),
 				}
 

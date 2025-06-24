@@ -3,9 +3,10 @@ package pg
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
-	"github.com/daniil11ru/egts/cli/receiver/source/primary"
+	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	"github.com/lib/pq"
 )
 
@@ -28,7 +29,7 @@ func (p *PrimarySource) db() (*sql.DB, error) {
 	return db, nil
 }
 
-func (p *PrimarySource) GetAllVehicles() ([]primary.Vehicle, error) {
+func (p *PrimarySource) GetAllVehicles() ([]types.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
 		return nil, err
@@ -41,9 +42,9 @@ func (p *PrimarySource) GetAllVehicles() ([]primary.Vehicle, error) {
 	}
 	defer rows.Close()
 
-	var vehicles []primary.Vehicle
+	var vehicles []types.Vehicle
 	for rows.Next() {
-		var v primary.Vehicle
+		var v types.Vehicle
 		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return nil, err
 		}
@@ -55,7 +56,7 @@ func (p *PrimarySource) GetAllVehicles() ([]primary.Vehicle, error) {
 	return vehicles, nil
 }
 
-func (p *PrimarySource) GetAllProviders() ([]primary.Provider, error) {
+func (p *PrimarySource) GetAllProviders() ([]types.Provider, error) {
 	db, err := p.db()
 	if err != nil {
 		return nil, err
@@ -75,9 +76,9 @@ func (p *PrimarySource) GetAllProviders() ([]primary.Provider, error) {
 	}
 	defer rows.Close()
 
-	var providers []primary.Provider
+	var providers []types.Provider
 	for rows.Next() {
-		var pr primary.Provider
+		var pr types.Provider
 		var ips pq.StringArray
 		if err := rows.Scan(&pr.ID, &pr.Name, &ips); err != nil {
 			return nil, err
@@ -91,7 +92,7 @@ func (p *PrimarySource) GetAllProviders() ([]primary.Provider, error) {
 	return providers, nil
 }
 
-func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]primary.Vehicle, error) {
+func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]types.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
 		return nil, err
@@ -114,9 +115,9 @@ func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]primary.Vehicle, e
 	}
 	defer rows.Close()
 
-	var vehicles []primary.Vehicle
+	var vehicles []types.Vehicle
 	for rows.Next() {
-		var v primary.Vehicle
+		var v types.Vehicle
 		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return nil, err
 		}
@@ -128,10 +129,10 @@ func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]primary.Vehicle, e
 	return vehicles, nil
 }
 
-func (p *PrimarySource) GetVehicleByID(id int32) (primary.Vehicle, error) {
+func (p *PrimarySource) GetVehicleByID(id int32) (types.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
-		return primary.Vehicle{}, err
+		return types.Vehicle{}, err
 	}
 
 	const q = `
@@ -141,7 +142,7 @@ func (p *PrimarySource) GetVehicleByID(id int32) (primary.Vehicle, error) {
 	`
 	row := db.QueryRow(q, id)
 
-	var v primary.Vehicle
+	var v types.Vehicle
 	if err := row.Scan(
 		&v.ID,
 		&v.IMEI,
@@ -151,18 +152,18 @@ func (p *PrimarySource) GetVehicleByID(id int32) (primary.Vehicle, error) {
 		&v.ModerationStatus,
 	); err != nil {
 		if err == sql.ErrNoRows {
-			return primary.Vehicle{}, fmt.Errorf("транспорт с ID %d не найден", id)
+			return types.Vehicle{}, fmt.Errorf("транспорт с ID %d не найден", id)
 		}
-		return primary.Vehicle{}, err
+		return types.Vehicle{}, err
 	}
 
 	return v, nil
 }
 
-func (p *PrimarySource) GetVehicleByOID(oid int32) (primary.Vehicle, error) {
+func (p *PrimarySource) GetVehicleByOID(oid int32) (types.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
-		return primary.Vehicle{}, err
+		return types.Vehicle{}, err
 	}
 
 	const q = `
@@ -172,18 +173,18 @@ func (p *PrimarySource) GetVehicleByOID(oid int32) (primary.Vehicle, error) {
     `
 	rows, err := db.Query(q, oid)
 	if err != nil {
-		return primary.Vehicle{}, err
+		return types.Vehicle{}, err
 	}
 	defer rows.Close()
 
 	var (
-		v     primary.Vehicle
+		v     types.Vehicle
 		count int
 	)
 	for rows.Next() {
-		var tmp primary.Vehicle
+		var tmp types.Vehicle
 		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
-			return primary.Vehicle{}, err
+			return types.Vehicle{}, err
 		}
 		if count == 0 {
 			v = tmp
@@ -194,23 +195,23 @@ func (p *PrimarySource) GetVehicleByOID(oid int32) (primary.Vehicle, error) {
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return primary.Vehicle{}, err
+		return types.Vehicle{}, err
 	}
 
 	switch count {
 	case 0:
-		return primary.Vehicle{}, fmt.Errorf("транспорт с OID %d не найден", oid)
+		return types.Vehicle{}, fmt.Errorf("транспорт с OID %d не найден", oid)
 	case 1:
 		return v, nil
 	default:
-		return primary.Vehicle{}, fmt.Errorf("найдено множество транспортных единиц с OID %d", oid)
+		return types.Vehicle{}, fmt.Errorf("найдено множество транспортных единиц с OID %d", oid)
 	}
 }
 
-func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid int32, providerID int32) (primary.Vehicle, error) {
+func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid int32, providerID int32) (types.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
-		return primary.Vehicle{}, err
+		return types.Vehicle{}, err
 	}
 
 	const q = `
@@ -220,18 +221,18 @@ func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid int32, providerID int32
 	`
 	rows, err := db.Query(q, oid, providerID)
 	if err != nil {
-		return primary.Vehicle{}, err
+		return types.Vehicle{}, err
 	}
 	defer rows.Close()
 
 	var (
-		v     primary.Vehicle
+		v     types.Vehicle
 		count int
 	)
 	for rows.Next() {
-		var tmp primary.Vehicle
+		var tmp types.Vehicle
 		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
-			return primary.Vehicle{}, err
+			return types.Vehicle{}, err
 		}
 		if count == 0 {
 			v = tmp
@@ -242,20 +243,20 @@ func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid int32, providerID int32
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return primary.Vehicle{}, err
+		return types.Vehicle{}, err
 	}
 
 	switch count {
 	case 0:
-		return primary.Vehicle{}, fmt.Errorf("транспорт с OID %d и провайдером %d не найден", oid, providerID)
+		return types.Vehicle{}, fmt.Errorf("транспорт с OID %d и провайдером %d не найден", oid, providerID)
 	case 1:
 		return v, nil
 	default:
-		return primary.Vehicle{}, fmt.Errorf("найдено несколько транспортных единиц с OID %d и провайдером %d", oid, providerID)
+		return types.Vehicle{}, fmt.Errorf("найдено несколько транспортных единиц с OID %d и провайдером %d", oid, providerID)
 	}
 }
 
-func (p *PrimarySource) AddVehicle(v primary.Vehicle) (int32, error) {
+func (p *PrimarySource) AddVehicle(v types.Vehicle) (int32, error) {
 	db, err := p.db()
 	if err != nil {
 		return 0, err
@@ -301,10 +302,10 @@ func (p *PrimarySource) UpdateVehicleOID(id int32, oid int32) error {
 	return nil
 }
 
-func (p *PrimarySource) GetProviderByIP(ip string) (primary.Provider, error) {
+func (p *PrimarySource) GetProviderByIP(ip string) (types.Provider, error) {
 	db, err := p.db()
 	if err != nil {
-		return primary.Provider{}, err
+		return types.Provider{}, err
 	}
 
 	const q = `
@@ -319,13 +320,13 @@ func (p *PrimarySource) GetProviderByIP(ip string) (primary.Provider, error) {
 	`
 
 	row := db.QueryRow(q, ip)
-	var pr primary.Provider
+	var pr types.Provider
 	var ips pq.StringArray
 	if err := row.Scan(&pr.ID, &pr.Name, &ips); err != nil {
 		if err == sql.ErrNoRows {
-			return primary.Provider{}, fmt.Errorf("провайдер с IP %s не найден", ip)
+			return types.Provider{}, fmt.Errorf("провайдер с IP %s не найден", ip)
 		}
-		return primary.Provider{}, err
+		return types.Provider{}, err
 	}
 	pr.IP = []string(ips)
 	return pr, nil
@@ -381,4 +382,48 @@ func (p *PrimarySource) AddVehicleMovement(message interface{ ToBytes() ([]byte,
 	}
 
 	return id, nil
+}
+
+func (p *PrimarySource) GetLastVehiclePosition(vehicleID int32) (types.Position, error) {
+	db, err := p.db()
+	if err != nil {
+		return types.Position{}, err
+	}
+
+	const q = `
+		SELECT
+			data->>'latitude',
+			data->>'longitude',
+			data->>'altitude'
+		FROM vehicle_movement
+		WHERE vehicle_id = $1
+		ORDER BY (data->>'sent_unix_time')::bigint DESC
+		LIMIT 1
+	`
+	var latStr, lonStr, altStr sql.NullString
+	if err := db.QueryRow(q, vehicleID).Scan(&latStr, &lonStr, &altStr); err != nil {
+		if err == sql.ErrNoRows {
+			return types.Position{}, fmt.Errorf("нет записей местоположения для транспорта с ID %d", vehicleID)
+		}
+		return types.Position{}, err
+	}
+
+	var pos types.Position
+	if latStr.Valid {
+		if v, err := strconv.ParseFloat(latStr.String, 64); err == nil {
+			pos.Latitude = v
+		}
+	}
+	if lonStr.Valid {
+		if v, err := strconv.ParseFloat(lonStr.String, 64); err == nil {
+			pos.Longitude = v
+		}
+	}
+	if altStr.Valid {
+		if v, err := strconv.ParseUint(altStr.String, 10, 32); err == nil {
+			pos.Altitude = uint32(v)
+		}
+	}
+
+	return pos, nil
 }

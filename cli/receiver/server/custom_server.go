@@ -190,7 +190,7 @@ func (s *CustomServer) handleAppData(conn net.Conn, pkg *egts.Package, receivedT
 	)
 
 	for _, rec := range *pkg.ServicesFrameData.(*egts.ServiceDataSet) {
-		exportPacket := packet.NavRecord{
+		exportPacket := packet.NavigationRecord{
 			PacketID: uint32(pkg.PacketIdentifier),
 		}
 

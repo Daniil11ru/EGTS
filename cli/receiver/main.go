@@ -80,6 +80,7 @@ func main() {
 		AddVehicleMovementMonthStart: cfg.GetSaveTelematicsDataMonthStart(),
 		AddVehicleMovementMonthEnd:   cfg.GetSaveTelematicsDataMonthEnd(),
 	}
+	savePacket.Initialize()
 	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
 
 	defer connector.Close()

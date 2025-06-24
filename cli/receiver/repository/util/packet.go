@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 )
 
-type NavRecord struct {
+type NavigationRecord struct {
 	OID               uint32  `json:"oid"`
 	PacketID          uint32  `json:"packet_id"`
 	SentTimestamp     int64   `json:"sent_unix_time"`
@@ -21,6 +21,6 @@ type NavRecord struct {
 	Direction         uint8   `json:"direction"`
 }
 
-func (eep *NavRecord) ToBytes() ([]byte, error) {
+func (eep *NavigationRecord) ToBytes() ([]byte, error) {
 	return json.Marshal(eep)
 }

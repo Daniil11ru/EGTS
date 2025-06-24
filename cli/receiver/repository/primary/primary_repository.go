@@ -3,37 +3,38 @@ package primary
 import (
 	"database/sql"
 
+	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	"github.com/daniil11ru/egts/cli/receiver/source/primary"
 )
 
 type PrimaryRepository struct {
-	Source primary.AuxiliaryInformationSource
+	Source primary.PrimarySource
 }
 
-func (p *PrimaryRepository) GetAllVehicles() ([]primary.Vehicle, error) {
+func (p *PrimaryRepository) GetAllVehicles() ([]types.Vehicle, error) {
 	return p.Source.GetAllVehicles()
 }
 
-func (p *PrimaryRepository) GetVehicleModerationStatus(id int32) (primary.ModerationStatus, error) {
+func (p *PrimaryRepository) GetVehicleModerationStatus(id int32) (types.ModerationStatus, error) {
 	vehicle, err := p.Source.GetVehicleByID(id)
 	return vehicle.ModerationStatus, err
 }
 
-func (p *PrimaryRepository) GetVehiclesByProviderIP(ip string) ([]primary.Vehicle, error) {
+func (p *PrimaryRepository) GetVehiclesByProviderIP(ip string) ([]types.Vehicle, error) {
 	return p.Source.GetVehiclesByProviderIP(ip)
 }
 
-func (p *PrimaryRepository) GetVehicleByOIDAndProviderID(OID int32, providerID int32) (primary.Vehicle, error) {
+func (p *PrimaryRepository) GetVehicleByOIDAndProviderID(OID int32, providerID int32) (types.Vehicle, error) {
 	return p.Source.GetVehicleByOIDAndProviderID(OID, providerID)
 }
 
 func (p *PrimaryRepository) AddIndefiniteVehicle(OID int32, providerID int32) (int32, error) {
-	return p.Source.AddVehicle(primary.Vehicle{
+	return p.Source.AddVehicle(types.Vehicle{
 		IMEI:               int64(OID),
 		OID:                sql.NullInt32{Int32: OID, Valid: true},
 		LicensePlateNumber: sql.NullString{String: "", Valid: false},
 		ProviderID:         providerID,
-		ModerationStatus:   primary.ModerationStatusPending,
+		ModerationStatus:   types.ModerationStatusPending,
 	},
 	)
 }
@@ -49,4 +50,8 @@ func (p *PrimaryRepository) GetProviderIDByIP(ip string) (int32, error) {
 
 func (p *PrimaryRepository) AddVehicleMovement(message interface{ ToBytes() ([]byte, error) }, vehicleID int) (int32, error) {
 	return p.Source.AddVehicleMovement(message, vehicleID)
+}
+
+func (p *PrimaryRepository) GetLastVehiclePosition(vehicle_id int32) (types.Position, error) {
+	return p.Source.GetLastVehiclePosition(vehicle_id)
 }

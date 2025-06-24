@@ -6,8 +6,9 @@ import (
 	"time"
 
 	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
+	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	util "github.com/daniil11ru/egts/cli/receiver/repository/util"
-	source "github.com/daniil11ru/egts/cli/receiver/source/primary"
+	"github.com/sirupsen/logrus"
 )
 
 type SavePackage struct {
@@ -15,6 +16,26 @@ type SavePackage struct {
 
 	AddVehicleMovementMonthStart int
 	AddVehicleMovementMonthEnd   int
+
+	vehicleIDToLastPosition map[int32]types.Position
+}
+
+func (domain *SavePackage) Initialize() error {
+	domain.vehicleIDToLastPosition = make(map[int32]types.Position)
+
+	vehicles, getAllVehiclesErr := domain.PrimaryRepository.GetAllVehicles()
+	if getAllVehiclesErr != nil {
+		return fmt.Errorf("не удалось инициализировать кэш: %w", getAllVehiclesErr)
+	}
+
+	for i := 0; i < len(vehicles); i++ {
+		lastPosition, getLastPositionErr := domain.PrimaryRepository.GetLastVehiclePosition(vehicles[i].ID)
+		if getLastPositionErr == nil {
+			domain.vehicleIDToLastPosition[vehicles[i].ID] = lastPosition
+		}
+	}
+
+	return nil
 }
 
 func isPrefixBytes(a, b uint64, n int) bool {
@@ -82,7 +103,7 @@ func isPartOf(a, b uint64) bool {
 	return false
 }
 
-func (domain *SavePackage) getVehicleIDByOID(OID int32, vehicles []source.Vehicle) (int32, error) {
+func (domain *SavePackage) getVehicleIDByOID(OID int32, vehicles []types.Vehicle) (int32, error) {
 	isFound := false
 	var id int32 = 0
 
@@ -133,16 +154,17 @@ func (s *SavePackage) resolveVehicleID(OID int32, providerIP string) (int32, err
 	return id, nil
 }
 
-func (s *SavePackage) resolveModerationStatus(id int32) (source.ModerationStatus, error) {
+func (s *SavePackage) resolveModerationStatus(id int32) (types.ModerationStatus, error) {
 	moderationStatus, err := s.PrimaryRepository.GetVehicleModerationStatus(id)
 	return moderationStatus, err
 }
 
-func (s *SavePackage) Run(data *util.NavRecord, providerIP string) error {
+func (s *SavePackage) Run(data *util.NavigationRecord, providerIP string) error {
 	oid := int32(data.OID)
 
 	month := int(time.Now().UTC().Month())
 	if month < s.AddVehicleMovementMonthStart || month > s.AddVehicleMovementMonthEnd {
+		logrus.Debug("запись телематических данных в текущий месяц запрещена")
 		return nil
 	}
 
@@ -155,9 +177,21 @@ func (s *SavePackage) Run(data *util.NavRecord, providerIP string) error {
 	if err != nil {
 		return fmt.Errorf("не удалось определить статус модерации транспорта с ID %d: %w", vehicleID, err)
 	}
-	if moderationStatus == source.ModerationStatusRejected {
-		return fmt.Errorf("запись телематических данных для транспорта с ID %d запрещена", vehicleID)
+	if moderationStatus == types.ModerationStatusRejected {
+		logrus.Debugf("запись телематических данных для транспорта с ID %d запрещена", vehicleID)
+		return nil
 	}
+
+	currentPosition := types.Position{Latitude: data.Latitude, Longitude: data.Longitude, Altitude: data.Altitude}
+	lastPosition, OK := s.vehicleIDToLastPosition[vehicleID]
+	if OK {
+		accuracy_meters := 10.0
+		if lastPosition.EqualsTo(&currentPosition, accuracy_meters) {
+			logrus.Debugf("новое местоположение транспорта с ID %d не отличается от предыдущего", vehicleID)
+			return nil
+		}
+	}
+	s.vehicleIDToLastPosition[vehicleID] = currentPosition
 
 	if _, err := s.PrimaryRepository.AddVehicleMovement(data, int(vehicleID)); err != nil {
 		return fmt.Errorf("не удалось сохранить телематические данные для транспорта с ID %d: %w", vehicleID, err)
