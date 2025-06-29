@@ -29,18 +29,18 @@ func (ms ModerationStatus) Value() (driver.Value, error) {
 }
 
 type Vehicle struct {
-	ID                 int32
-	IMEI               int64
-	OID                sql.NullInt64
-	LicensePlateNumber sql.NullString
-	ProviderID         int32
-	ModerationStatus   ModerationStatus
+	ID               int32
+	IMEI             int64
+	OID              sql.NullInt64
+	Name             sql.NullString
+	ProviderID       int32
+	ModerationStatus ModerationStatus
 }
 
 type Provider struct {
 	ID   int32
 	Name string
-	IP   []string
+	IP   string
 }
 
 type Position struct {

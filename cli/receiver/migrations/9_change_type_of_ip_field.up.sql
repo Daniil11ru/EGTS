@@ -1,0 +1,6 @@
+UPDATE provider 
+SET ip = SUBSTRING(ip, 1, 15)
+WHERE LENGTH(ip) > 15;
+
+ALTER TABLE provider 
+ALTER COLUMN ip TYPE VARCHAR(15);

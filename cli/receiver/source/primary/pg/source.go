@@ -7,7 +7,6 @@ import (
 
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
-	"github.com/lib/pq"
 )
 
 type PrimarySource struct {
@@ -35,7 +34,7 @@ func (p *PrimarySource) GetAllVehicles() ([]types.Vehicle, error) {
 		return nil, err
 	}
 
-	const q = "SELECT id, imei, oid, license_plate_number, provider_id, moderation_status FROM vehicle"
+	const q = "SELECT id, imei, oid, name, provider_id, moderation_status FROM vehicle"
 	rows, err := db.Query(q)
 	if err != nil {
 		return nil, err
@@ -45,7 +44,7 @@ func (p *PrimarySource) GetAllVehicles() ([]types.Vehicle, error) {
 	var vehicles []types.Vehicle
 	for rows.Next() {
 		var v types.Vehicle
-		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID, &v.ModerationStatus); err != nil {
+		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.Name, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return nil, err
 		}
 		vehicles = append(vehicles, v)
@@ -62,14 +61,7 @@ func (p *PrimarySource) GetAllProviders() ([]types.Provider, error) {
 		return nil, err
 	}
 
-	const q = `
-		SELECT pr.id,
-		       pr.name,
-		       COALESCE(array_remove(array_agg(pi.ip), NULL), '{}') AS ips
-		FROM provider pr
-		LEFT JOIN provider_to_ip pi ON pi.provider_id = pr.id
-		GROUP BY pr.id, pr.name
-	`
+	const q = `SELECT id, name, ip FROM provider`
 	rows, err := db.Query(q)
 	if err != nil {
 		return nil, err
@@ -79,16 +71,25 @@ func (p *PrimarySource) GetAllProviders() ([]types.Provider, error) {
 	var providers []types.Provider
 	for rows.Next() {
 		var pr types.Provider
-		var ips pq.StringArray
-		if err := rows.Scan(&pr.ID, &pr.Name, &ips); err != nil {
+		var ip sql.NullString
+
+		if err := rows.Scan(&pr.ID, &pr.Name, &ip); err != nil {
 			return nil, err
 		}
-		pr.IP = []string(ips)
+
+		if ip.Valid {
+			pr.IP = ip.String
+		} else {
+			pr.IP = ""
+		}
+
 		providers = append(providers, pr)
 	}
+
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
 	return providers, nil
 }
 
@@ -99,16 +100,17 @@ func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]types.Vehicle, err
 	}
 
 	const q = `
-		SELECT v.id,
-		       v.imei,
-		       v.oid,
-		       v.license_plate_number,
-		       v.provider_id,
-			   v.moderation_status
-		FROM vehicle v
-		JOIN provider_to_ip pi ON pi.provider_id = v.provider_id
-		WHERE pi.ip = $1
-	`
+        SELECT v.id,
+               v.imei,
+               v.oid,
+               v.name,
+               v.provider_id,
+               v.moderation_status
+        FROM vehicle v
+        JOIN provider p ON p.id = v.provider_id
+        WHERE p.ip = $1
+    `
+
 	rows, err := db.Query(q, ip)
 	if err != nil {
 		return nil, err
@@ -118,14 +120,23 @@ func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]types.Vehicle, err
 	var vehicles []types.Vehicle
 	for rows.Next() {
 		var v types.Vehicle
-		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.LicensePlateNumber, &v.ProviderID, &v.ModerationStatus); err != nil {
+		if err := rows.Scan(
+			&v.ID,
+			&v.IMEI,
+			&v.OID,
+			&v.Name,
+			&v.ProviderID,
+			&v.ModerationStatus,
+		); err != nil {
 			return nil, err
 		}
 		vehicles = append(vehicles, v)
 	}
+
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
 	return vehicles, nil
 }
 
@@ -136,7 +147,7 @@ func (p *PrimarySource) GetVehicleByID(id int32) (types.Vehicle, error) {
 	}
 
 	const q = `
-		SELECT id, imei, oid, license_plate_number, provider_id, moderation_status
+		SELECT id, imei, oid, name, provider_id, moderation_status
 		FROM vehicle
 		WHERE id = $1
 	`
@@ -147,7 +158,7 @@ func (p *PrimarySource) GetVehicleByID(id int32) (types.Vehicle, error) {
 		&v.ID,
 		&v.IMEI,
 		&v.OID,
-		&v.LicensePlateNumber,
+		&v.Name,
 		&v.ProviderID,
 		&v.ModerationStatus,
 	); err != nil {
@@ -167,7 +178,7 @@ func (p *PrimarySource) GetVehicleByOID(oid uint32) (types.Vehicle, error) {
 	}
 
 	const q = `
-        SELECT id, imei, oid, license_plate_number, provider_id, moderation_status
+        SELECT id, imei, oid, name, provider_id, moderation_status
         FROM vehicle
         WHERE oid = $1
     `
@@ -183,7 +194,7 @@ func (p *PrimarySource) GetVehicleByOID(oid uint32) (types.Vehicle, error) {
 	)
 	for rows.Next() {
 		var tmp types.Vehicle
-		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
+		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.Name, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
 			return types.Vehicle{}, err
 		}
 		if count == 0 {
@@ -215,7 +226,7 @@ func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid uint32, providerID int3
 	}
 
 	const q = `
-		SELECT id, imei, oid, license_plate_number, provider_id, moderation_status
+		SELECT id, imei, oid, name, provider_id, moderation_status
 		FROM vehicle
 		WHERE oid = $1 AND provider_id = $2
 	`
@@ -231,7 +242,7 @@ func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid uint32, providerID int3
 	)
 	for rows.Next() {
 		var tmp types.Vehicle
-		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.LicensePlateNumber, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
+		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.Name, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
 			return types.Vehicle{}, err
 		}
 		if count == 0 {
@@ -263,12 +274,12 @@ func (p *PrimarySource) AddVehicle(v types.Vehicle) (int32, error) {
 	}
 
 	const q = `
-        INSERT INTO vehicle (imei, oid, license_plate_number, provider_id, moderation_status)
+        INSERT INTO vehicle (imei, oid, name, provider_id, moderation_status)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id
     `
 	var id int32
-	if err := db.QueryRow(q, v.IMEI, v.OID, v.LicensePlateNumber, v.ProviderID, v.ModerationStatus).Scan(&id); err != nil {
+	if err := db.QueryRow(q, v.IMEI, v.OID, v.Name, v.ProviderID, v.ModerationStatus).Scan(&id); err != nil {
 		return 0, err
 	}
 
@@ -309,26 +320,28 @@ func (p *PrimarySource) GetProviderByIP(ip string) (types.Provider, error) {
 	}
 
 	const q = `
-		SELECT pr.id,
-		       pr.name,
-		       COALESCE(array_remove(array_agg(pi2.ip), NULL), '{}') AS ips
-		FROM provider pr
-		JOIN provider_to_ip pi1 ON pi1.provider_id = pr.id
-		LEFT JOIN provider_to_ip pi2 ON pi2.provider_id = pr.id
-		WHERE pi1.ip = $1
-		GROUP BY pr.id, pr.name
-	`
+        SELECT id, name, ip
+        FROM provider
+        WHERE ip = $1
+    `
 
 	row := db.QueryRow(q, ip)
 	var pr types.Provider
-	var ips pq.StringArray
-	if err := row.Scan(&pr.ID, &pr.Name, &ips); err != nil {
+	var nullableIP sql.NullString
+
+	if err := row.Scan(&pr.ID, &pr.Name, &nullableIP); err != nil {
 		if err == sql.ErrNoRows {
 			return types.Provider{}, fmt.Errorf("провайдер с IP %s не найден", ip)
 		}
 		return types.Provider{}, err
 	}
-	pr.IP = []string(ips)
+
+	if nullableIP.Valid {
+		pr.IP = nullableIP.String
+	} else {
+		pr.IP = ""
+	}
+
 	return pr, nil
 }
 
@@ -337,10 +350,13 @@ func (p *PrimarySource) GetAllIPs() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	const q = `
-		SELECT DISTINCT ip
-		FROM provider_to_ip
-	`
+        SELECT DISTINCT ip
+        FROM provider
+        WHERE ip IS NOT NULL AND ip <> ''
+    `
+
 	rows, err := db.Query(q)
 	if err != nil {
 		return nil, err
@@ -355,9 +371,11 @@ func (p *PrimarySource) GetAllIPs() ([]string, error) {
 		}
 		ips = append(ips, ip)
 	}
+
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
 	return ips, nil
 }
 

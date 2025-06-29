@@ -1,0 +1,2 @@
+UPDATE provider SET ip = '' WHERE ip IS NULL;
+ALTER TABLE provider ALTER COLUMN ip SET NOT NULL;
