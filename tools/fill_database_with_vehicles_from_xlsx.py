@@ -51,7 +51,7 @@ def main():
     rows = df[[args.imei_column, args.plate_column]].dropna()
     conn = psycopg2.connect(host=args.db_host, port=args.db_port, dbname=args.db_name, user=args.db_user, password=args.db_password)
     cur = conn.cursor()
-    insert_sql = 'insert into vehicle (imei, oid, license_plate_number, provider_id, moderation_status) values (%s,%s,%s,%s,%s)'
+    insert_sql = 'insert into vehicle (imei, oid, name, provider_id, moderation_status) values (%s,%s,%s,%s,%s)'
     for _, r in rows.iterrows():
         imei = str(r[args.imei_column])
         plate = str(r[args.plate_column])
