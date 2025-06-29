@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
+	"github.com/daniil11ru/egts/cli/receiver/repository/util"
 	"github.com/daniil11ru/egts/cli/receiver/source/primary"
 )
 
@@ -48,8 +49,8 @@ func (p *PrimaryRepository) GetProviderIDByIP(ip string) (int32, error) {
 	return provider.ID, err
 }
 
-func (p *PrimaryRepository) AddVehicleMovement(message interface{ ToBytes() ([]byte, error) }, vehicleID int) (int32, error) {
-	return p.Source.AddVehicleMovement(message, vehicleID)
+func (p *PrimaryRepository) AddVehicleMovement(data *util.NavigationRecord, vehicleID int) (int32, error) {
+	return p.Source.AddVehicleMovement(data, vehicleID)
 }
 
 func (p *PrimaryRepository) GetLastVehiclePosition(vehicle_id int32) (types.Position, error) {

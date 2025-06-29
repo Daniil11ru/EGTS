@@ -3,6 +3,7 @@ package primary
 import (
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
+	"github.com/daniil11ru/egts/cli/receiver/repository/util"
 )
 
 type PrimarySource interface {
@@ -17,6 +18,6 @@ type PrimarySource interface {
 	UpdateVehicleOID(id int32, OID uint32) error
 	GetProviderByIP(ip string) (types.Provider, error)
 	GetAllIPs() ([]string, error)
-	AddVehicleMovement(message interface{ ToBytes() ([]byte, error) }, vehicleID int) (int32, error)
+	AddVehicleMovement(data *util.NavigationRecord, vehicleID int) (int32, error)
 	GetLastVehiclePosition(vehicle_id int32) (types.Position, error)
 }

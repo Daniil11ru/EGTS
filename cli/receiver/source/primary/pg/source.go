@@ -7,6 +7,7 @@ import (
 
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
+	"github.com/daniil11ru/egts/cli/receiver/repository/util"
 )
 
 type PrimarySource struct {
@@ -379,23 +380,44 @@ func (p *PrimarySource) GetAllIPs() ([]string, error) {
 	return ips, nil
 }
 
-func (p *PrimarySource) AddVehicleMovement(message interface{ ToBytes() ([]byte, error) }, vehicleID int) (int32, error) {
-	if message == nil {
+func (p *PrimarySource) AddVehicleMovement(data *util.NavigationRecord, vehicleID int) (int32, error) {
+	if data == nil {
 		return 0, fmt.Errorf("некорректная ссылка на пакет")
 	}
 
-	packet, err := message.ToBytes()
-	if err != nil {
-		return 0, fmt.Errorf("ошибка сериализации пакета: %v", err)
-	}
-
 	const insertQuery = `
-        INSERT INTO vehicle_movement (data, vehicle_id)
-        VALUES ($1, $2)
+        INSERT INTO vehicle_movement (
+		vehicle_id,
+		oid,
+		latitude,
+		longitude,
+		altitude,
+		direction,
+		speed,
+		navigation_system,
+		satellite_count,
+		sent_unix_time,
+		received_unix_time
+		)
+        VALUES (
+		$1, 
+		$2,
+		$3,
+		$4,
+		$5,
+		$6,
+		$7,
+		$8,
+		$9,
+		$10,
+		$11)
         RETURNING id
     `
 	var id int32
-	if err := p.connector.GetConnection().QueryRow(insertQuery, packet, vehicleID).Scan(&id); err != nil {
+	if err := p.connector.GetConnection().QueryRow(insertQuery, vehicleID, data.OID,
+		data.Latitude, data.Longitude, data.Altitude, data.Direction,
+		data.Speed, data.NavigationSystem, data.SatelliteCount,
+		data.SentTimestamp, data.ReceivedTimestamp).Scan(&id); err != nil {
 		return 0, fmt.Errorf("не удалось вставить запись: %v", err)
 	}
 
@@ -409,17 +431,17 @@ func (p *PrimarySource) GetLastVehiclePosition(vehicleID int32) (types.Position,
 	}
 
 	const q = `
-		SELECT
-			data->>'latitude',
-			data->>'longitude',
-			data->>'altitude'
-		FROM vehicle_movement
-		WHERE vehicle_id = $1
-			AND data ? 'sent_unix_time'
-			AND data ? 'latitude'
-			AND data ? 'longitude'
-		ORDER BY (data->>'sent_unix_time')::bigint DESC NULLS LAST
-		LIMIT 1
+	SELECT
+		latitude,
+		longitude,
+		altitude
+	FROM vehicle_movement
+	WHERE vehicle_id = $1
+		AND sent_unix_time IS NOT NULL
+		AND latitude IS NOT NULL
+		AND longitude IS NOT NULL
+	ORDER BY sent_unix_time DESC
+	LIMIT 1
 	`
 	var latStr, lonStr, altStr sql.NullString
 	if err := db.QueryRow(q, vehicleID).Scan(&latStr, &lonStr, &altStr); err != nil {

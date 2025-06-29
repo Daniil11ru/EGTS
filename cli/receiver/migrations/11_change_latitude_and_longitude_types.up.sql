@@ -1,0 +1,3 @@
+ALTER TABLE vehicle_movement 
+ALTER COLUMN longitude TYPE FLOAT8,
+ALTER COLUMN latitude TYPE FLOAT8;

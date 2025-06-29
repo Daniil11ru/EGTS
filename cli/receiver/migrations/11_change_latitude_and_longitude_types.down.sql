@@ -1,0 +1,3 @@
+ALTER TABLE vehicle_movement 
+ALTER COLUMN longitude TYPE SMALLINT,
+ALTER COLUMN latitude TYPE SMALLINT;
