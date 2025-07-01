@@ -381,7 +381,6 @@ func (p *PrimarySource) AddVehicleMovement(data *util.NavigationRecord, vehicleI
 	const insertQuery = `
         INSERT INTO vehicle_movement (
             vehicle_id,
-            oid,
             latitude,
             longitude,
             altitude,
@@ -390,7 +389,7 @@ func (p *PrimarySource) AddVehicleMovement(data *util.NavigationRecord, vehicleI
             satellite_count,
             sent_at,
             received_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id
     `
 
@@ -398,7 +397,6 @@ func (p *PrimarySource) AddVehicleMovement(data *util.NavigationRecord, vehicleI
 	err := p.connector.GetConnection().QueryRow(
 		insertQuery,
 		vehicleID,
-		data.OID,
 		data.Latitude,
 		data.Longitude,
 		data.Altitude,
