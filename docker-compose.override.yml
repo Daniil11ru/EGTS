@@ -13,6 +13,9 @@ services:
     restart: unless-stopped
     depends_on:
       - wait-for-db
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
   # Вспомогательный сервис для ожидания доступности БД перед запуском приложения
   wait-for-db:

@@ -7,6 +7,8 @@ services:
       - "$APP_PORT:$APP_PORT"
     volumes:
       - app-logs:/logs
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
 volumes:
   app-logs:
