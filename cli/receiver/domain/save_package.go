@@ -107,60 +107,41 @@ func isPartOf(a, b uint64) bool {
 	return false
 }
 
-func (domain *SavePacket) getVehicleIDByOID(OID uint32, vehicles []types.Vehicle) (int32, error) {
-	isFound := false
-	var id int32 = 0
+func (domain *SavePacket) filterVehiclesByOID(OID uint32, vehicles []types.Vehicle) ([]types.Vehicle, error) {
+	var result []types.Vehicle
 
 	for _, v := range vehicles {
 		IMEI := v.IMEI
 
 		if isPartOf(uint64(OID), uint64(IMEI)) {
-			if !isFound {
-				isFound = true
-				id = v.ID
-			} else {
-				id = 0
-				return id, fmt.Errorf("не удалось однозначно определить IMEI")
-			}
+			result = append(result, v)
 		}
 	}
 
-	if isFound {
-		return id, nil
-	}
-	return id, fmt.Errorf("не удалось определить IMEI")
+	return result, nil
 }
 
-func (domain *SavePacket) getVehicleIDByOIDAndProviderIDFromStorage(OID uint32, providerID int32) (int32, error) {
-	vehicle, err := domain.PrimaryRepository.GetVehicleByOIDAndProviderID(OID, providerID)
-	return vehicle.ID, err
-}
-
-// TODO: убрать side effect в виде добавления нового транспорта в базу данных
-func (s *SavePacket) resolveVehicleID(OID uint32, providerIP string) (int32, error) {
+func (s *SavePacket) findVehicles(OID uint32, providerIP string) ([]types.Vehicle, error) {
 	providerID, getProviderIDError := s.PrimaryRepository.GetProviderIDByIP(providerIP)
 	if getProviderIDError != nil {
-		return providerID, getProviderIDError
+		return []types.Vehicle{}, getProviderIDError
 	}
 
-	id, err := s.getVehicleIDByOIDAndProviderIDFromStorage(OID, providerID)
-	if err == nil {
-		return id, nil
+	vehicles, getVehiclesByOIDAndProviderIDError := s.PrimaryRepository.GetVehiclesByOIDAndProviderID(OID, providerID)
+	if getVehiclesByOIDAndProviderIDError == nil {
+		return vehicles, nil
 	}
 
-	vehicles, auxErr := s.PrimaryRepository.GetVehiclesByProviderIP(providerIP)
-	if auxErr != nil {
-		return 0, auxErr
+	vehicles, getVehiclesByProviderIPError := s.PrimaryRepository.GetVehiclesByProviderIP(providerIP)
+	if getVehiclesByProviderIPError != nil {
+		return []types.Vehicle{}, getVehiclesByProviderIPError
+	}
+	vehicles, filterVehiclesByOIDError := s.filterVehiclesByOID(OID, vehicles)
+	if filterVehiclesByOIDError != nil {
+		return []types.Vehicle{}, filterVehiclesByOIDError
 	}
 
-	id, err = s.getVehicleIDByOID(OID, vehicles)
-	if err != nil {
-		id, err = s.PrimaryRepository.AddIndefiniteVehicle(OID, providerID)
-		return id, err
-	}
-
-	s.PrimaryRepository.UpdateVehicleOID(id, OID)
-	return id, nil
+	return vehicles, nil
 }
 
 func (s *SavePacket) resolveModerationStatus(id int32) (types.ModerationStatus, error) {
@@ -169,6 +150,15 @@ func (s *SavePacket) resolveModerationStatus(id int32) (types.ModerationStatus, 
 }
 
 func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
+	if data.Latitude == 0 || data.Longitude == 0 || data.OID == 0 {
+		return fmt.Errorf("широта, долгота и OID не должны быть пустыми")
+	}
+
+	providerID, getProviderIDError := s.PrimaryRepository.GetProviderIDByIP(providerIP)
+	if getProviderIDError != nil {
+		return fmt.Errorf("не удалось определить провайдера по IP %s: %w", providerIP, getProviderIDError)
+	}
+
 	oid := data.OID
 
 	month := int(time.Now().UTC().Month())
@@ -177,9 +167,24 @@ func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
 		return nil
 	}
 
-	vehicleID, err := s.resolveVehicleID(oid, providerIP)
+	var vehicleID int32
+	vehicles, err := s.findVehicles(oid, providerIP)
 	if err != nil {
 		return fmt.Errorf("не удалось найти транспорт по OID %d: %w", oid, err)
+	} else if len(vehicles) == 0 {
+		var addIndefiniteVehicleErr error
+		vehicleID, addIndefiniteVehicleErr = s.PrimaryRepository.AddIndefiniteVehicle(oid, providerID)
+		if addIndefiniteVehicleErr != nil {
+			return fmt.Errorf("не удалось добавить новый транспорт: %w", addIndefiniteVehicleErr)
+		}
+		logrus.Warnf("Не удалось найти транспорт по OID %d, был добавлен новый транспорт с ID %d", oid, vehicleID)
+	} else if len(vehicles) > 1 {
+		return fmt.Errorf("не удалось однозначно определить транспорт по OID %d", oid)
+	} else if len(vehicles) == 1 {
+		vehicleID = vehicles[0].ID
+
+		// FIXME: нужно обновлять только тогда, когда OID действительно отсутствует
+		s.PrimaryRepository.UpdateVehicleOID(vehicleID, oid)
 	}
 
 	moderationStatus, err := s.resolveModerationStatus(vehicleID)

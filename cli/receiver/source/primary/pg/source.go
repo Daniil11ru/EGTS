@@ -220,10 +220,10 @@ func (p *PrimarySource) GetVehicleByOID(oid uint32) (types.Vehicle, error) {
 	}
 }
 
-func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid uint32, providerID int32) (types.Vehicle, error) {
+func (p *PrimarySource) GetVehiclesByOIDAndProviderID(oid uint32, providerID int32) ([]types.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {
-		return types.Vehicle{}, err
+		return []types.Vehicle{}, err
 	}
 
 	const q = `
@@ -233,38 +233,26 @@ func (p *PrimarySource) GetVehicleByOIDAndProviderID(oid uint32, providerID int3
 	`
 	rows, err := db.Query(q, oid, providerID)
 	if err != nil {
-		return types.Vehicle{}, err
+		return []types.Vehicle{}, err
 	}
 	defer rows.Close()
 
-	var (
-		v     types.Vehicle
-		count int
-	)
+	var vehicles []types.Vehicle
 	for rows.Next() {
-		var tmp types.Vehicle
-		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.Name, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
-			return types.Vehicle{}, err
+		var v types.Vehicle
+		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.Name, &v.ProviderID, &v.ModerationStatus); err != nil {
+			return []types.Vehicle{}, err
 		}
-		if count == 0 {
-			v = tmp
-		}
-		count++
-		if count > 1 {
-			break
-		}
+		vehicles = append(vehicles, v)
 	}
 	if err := rows.Err(); err != nil {
-		return types.Vehicle{}, err
+		return []types.Vehicle{}, err
 	}
 
-	switch count {
-	case 0:
-		return types.Vehicle{}, fmt.Errorf("транспорт с OID %d и провайдером %d не найден", oid, providerID)
-	case 1:
-		return v, nil
-	default:
-		return types.Vehicle{}, fmt.Errorf("найдено несколько транспортных единиц с OID %d и провайдером %d", oid, providerID)
+	if len(vehicles) > 0 {
+		return vehicles, nil
+	} else {
+		return []types.Vehicle{}, fmt.Errorf("транспорт с OID %d и ID провайдера %d не найден", oid, providerID)
 	}
 }
 

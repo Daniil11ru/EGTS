@@ -25,8 +25,8 @@ func (p *PrimaryRepository) GetVehiclesByProviderIP(ip string) ([]types.Vehicle,
 	return p.Source.GetVehiclesByProviderIP(ip)
 }
 
-func (p *PrimaryRepository) GetVehicleByOIDAndProviderID(OID uint32, providerID int32) (types.Vehicle, error) {
-	return p.Source.GetVehicleByOIDAndProviderID(OID, providerID)
+func (p *PrimaryRepository) GetVehiclesByOIDAndProviderID(OID uint32, providerID int32) ([]types.Vehicle, error) {
+	return p.Source.GetVehiclesByOIDAndProviderID(OID, providerID)
 }
 
 func (p *PrimaryRepository) AddIndefiniteVehicle(OID uint32, providerID int32) (int32, error) {
