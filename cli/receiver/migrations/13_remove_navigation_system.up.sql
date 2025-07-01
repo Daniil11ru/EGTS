@@ -1,0 +1,2 @@
+ALTER TABLE vehicle_movement
+DROP COLUMN navigation_system;

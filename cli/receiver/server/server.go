@@ -200,9 +200,7 @@ func (s *Server) handleAppData(conn net.Conn, pkg *egts.Package, receivedTimesta
 	)
 
 	for _, rec := range *pkg.ServicesFrameData.(*egts.ServiceDataSet) {
-		exportPacket := packet.NavigationRecord{
-			PacketID: uint32(pkg.PacketIdentifier),
-		}
+		exportPacket := packet.NavigationRecord{}
 
 		// TODO: узнать, нужно ли проверять Recipient Service Type
 		serviceType = rec.SourceServiceType
@@ -268,10 +266,6 @@ func (s *Server) handleAppData(conn net.Conn, pkg *egts.Package, receivedTimesta
 			case *egts.SrExtPosData:
 				log.Debug("Разбор подзаписи EGTS_SR_EXT_POS_DATA")
 				exportPacket.SatelliteCount = subRecData.Satellites
-				exportPacket.PDOP = subRecData.PositionDilutionOfPrecision
-				exportPacket.HDOP = subRecData.HorizontalDilutionOfPrecision
-				exportPacket.VDOP = subRecData.VerticalDilutionOfPrecision
-				exportPacket.NavigationSystem = subRecData.NavigationSystem
 			default:
 				log.Warnf("Неподдерживаемая подзапись SRT=%d в записи RN=%d",
 					subRec.SubrecordType, rec.RecordNumber)

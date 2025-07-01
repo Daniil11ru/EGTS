@@ -245,6 +245,17 @@ func main() {
 							Altitude:            30,
 						},
 					},
+					egts.RecordData{
+						SubrecordType: 17,
+						SubrecordData: &egts.SrExtPosData{
+							NavigationSystemFieldExists: "0",
+							SatellitesFieldExists:       "1",
+							PdopFieldExists:             "0",
+							HdopFieldExists:             "0",
+							VdopFieldExists:             "0",
+							Satellites:                  20,
+						},
+					},
 				},
 			},
 		},

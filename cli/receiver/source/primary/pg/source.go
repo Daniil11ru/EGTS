@@ -382,7 +382,6 @@ func (p *PrimarySource) AddVehicleMovement(data *util.NavigationRecord, vehicleI
 		altitude,
 		direction,
 		speed,
-		navigation_system,
 		satellite_count,
 		sent_unix_time,
 		received_unix_time
@@ -397,14 +396,13 @@ func (p *PrimarySource) AddVehicleMovement(data *util.NavigationRecord, vehicleI
 		$7,
 		$8,
 		$9,
-		$10,
-		$11)
+		$10)
         RETURNING id
     `
 	var id int32
 	if err := p.connector.GetConnection().QueryRow(insertQuery, vehicleID, data.OID,
 		data.Latitude, data.Longitude, data.Altitude, data.Direction,
-		data.Speed, data.NavigationSystem, data.SatelliteCount,
+		data.Speed, data.SatelliteCount,
 		data.SentTimestamp, data.ReceivedTimestamp).Scan(&id); err != nil {
 		return 0, fmt.Errorf("не удалось вставить запись: %v", err)
 	}
