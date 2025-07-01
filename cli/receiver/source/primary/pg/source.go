@@ -3,7 +3,7 @@ package pg
 import (
 	"database/sql"
 	"fmt"
-	"strconv"
+	"time"
 
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
@@ -45,7 +45,7 @@ func (p *PrimarySource) GetAllVehicles() ([]types.Vehicle, error) {
 	var vehicles []types.Vehicle
 	for rows.Next() {
 		var v types.Vehicle
-		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.Name, &v.ProviderID, &v.ModerationStatus); err != nil {
+		if err := rows.Scan(&v.ID, &v.IMEI, &v.Name, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return nil, err
 		}
 		vehicles = append(vehicles, v)
@@ -103,7 +103,6 @@ func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]types.Vehicle, err
 	const q = `
         SELECT v.id,
                v.imei,
-               v.oid,
                v.name,
                v.provider_id,
                v.moderation_status
@@ -124,7 +123,6 @@ func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]types.Vehicle, err
 		if err := rows.Scan(
 			&v.ID,
 			&v.IMEI,
-			&v.OID,
 			&v.Name,
 			&v.ProviderID,
 			&v.ModerationStatus,
@@ -148,7 +146,7 @@ func (p *PrimarySource) GetVehicleByID(id int32) (types.Vehicle, error) {
 	}
 
 	const q = `
-		SELECT id, imei, oid, name, provider_id, moderation_status
+		SELECT id, imei, name, provider_id, moderation_status
 		FROM vehicle
 		WHERE id = $1
 	`
@@ -158,7 +156,6 @@ func (p *PrimarySource) GetVehicleByID(id int32) (types.Vehicle, error) {
 	if err := row.Scan(
 		&v.ID,
 		&v.IMEI,
-		&v.OID,
 		&v.Name,
 		&v.ProviderID,
 		&v.ModerationStatus,
@@ -179,7 +176,7 @@ func (p *PrimarySource) GetVehicleByOID(oid uint32) (types.Vehicle, error) {
 	}
 
 	const q = `
-        SELECT id, imei, oid, name, provider_id, moderation_status
+        SELECT id, imei, name, provider_id, moderation_status
         FROM vehicle
         WHERE oid = $1
     `
@@ -195,7 +192,7 @@ func (p *PrimarySource) GetVehicleByOID(oid uint32) (types.Vehicle, error) {
 	)
 	for rows.Next() {
 		var tmp types.Vehicle
-		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.OID, &tmp.Name, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
+		if err := rows.Scan(&tmp.ID, &tmp.IMEI, &tmp.Name, &tmp.ProviderID, &tmp.ModerationStatus); err != nil {
 			return types.Vehicle{}, err
 		}
 		if count == 0 {
@@ -227,7 +224,7 @@ func (p *PrimarySource) GetVehiclesByOIDAndProviderID(oid uint32, providerID int
 	}
 
 	const q = `
-		SELECT id, imei, oid, name, provider_id, moderation_status
+		SELECT id, imei, name, provider_id, moderation_status
 		FROM vehicle
 		WHERE oid = $1 AND provider_id = $2
 	`
@@ -240,7 +237,7 @@ func (p *PrimarySource) GetVehiclesByOIDAndProviderID(oid uint32, providerID int
 	var vehicles []types.Vehicle
 	for rows.Next() {
 		var v types.Vehicle
-		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.Name, &v.ProviderID, &v.ModerationStatus); err != nil {
+		if err := rows.Scan(&v.ID, &v.IMEI, &v.Name, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return []types.Vehicle{}, err
 		}
 		vehicles = append(vehicles, v)
@@ -263,12 +260,12 @@ func (p *PrimarySource) AddVehicle(v types.Vehicle) (int32, error) {
 	}
 
 	const q = `
-        INSERT INTO vehicle (imei, oid, name, provider_id, moderation_status)
+        INSERT INTO vehicle (imei, name, provider_id, moderation_status)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id
     `
 	var id int32
-	if err := db.QueryRow(q, v.IMEI, v.OID, v.Name, v.ProviderID, v.ModerationStatus).Scan(&id); err != nil {
+	if err := db.QueryRow(q, v.IMEI, v.Name, v.ProviderID, v.ModerationStatus).Scan(&id); err != nil {
 		return 0, err
 	}
 
@@ -373,37 +370,46 @@ func (p *PrimarySource) AddVehicleMovement(data *util.NavigationRecord, vehicleI
 		return 0, fmt.Errorf("некорректная ссылка на пакет")
 	}
 
+	var sentTime time.Time
+	if data.SentTimestamp == 0 {
+		sentTime = time.Time{}
+	} else {
+		sentTime = time.Unix(data.SentTimestamp, 0)
+	}
+	receivedTime := time.Unix(data.ReceivedTimestamp, 0)
+
 	const insertQuery = `
         INSERT INTO vehicle_movement (
-		vehicle_id,
-		oid,
-		latitude,
-		longitude,
-		altitude,
-		direction,
-		speed,
-		satellite_count,
-		sent_unix_time,
-		received_unix_time
-		)
-        VALUES (
-		$1, 
-		$2,
-		$3,
-		$4,
-		$5,
-		$6,
-		$7,
-		$8,
-		$9,
-		$10)
+            vehicle_id,
+            oid,
+            latitude,
+            longitude,
+            altitude,
+            direction,
+            speed,
+            satellite_count,
+            sent_at,
+            received_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING id
     `
+
 	var id int32
-	if err := p.connector.GetConnection().QueryRow(insertQuery, vehicleID, data.OID,
-		data.Latitude, data.Longitude, data.Altitude, data.Direction,
-		data.Speed, data.SatelliteCount,
-		data.SentTimestamp, data.ReceivedTimestamp).Scan(&id); err != nil {
+	err := p.connector.GetConnection().QueryRow(
+		insertQuery,
+		vehicleID,
+		data.OID,
+		data.Latitude,
+		data.Longitude,
+		data.Altitude,
+		data.Direction,
+		data.Speed,
+		data.SatelliteCount,
+		sentTime,
+		receivedTime,
+	).Scan(&id)
+
+	if err != nil {
 		return 0, fmt.Errorf("не удалось вставить запись: %v", err)
 	}
 
@@ -417,41 +423,32 @@ func (p *PrimarySource) GetLastVehiclePosition(vehicleID int32) (types.Position,
 	}
 
 	const q = `
-	SELECT
-		latitude,
-		longitude,
-		altitude
-	FROM vehicle_movement
-	WHERE vehicle_id = $1
-		AND sent_unix_time IS NOT NULL
-		AND latitude IS NOT NULL
-		AND longitude IS NOT NULL
-	ORDER BY sent_unix_time DESC
-	LIMIT 1
-	`
-	var latStr, lonStr, altStr sql.NullString
-	if err := db.QueryRow(q, vehicleID).Scan(&latStr, &lonStr, &altStr); err != nil {
+    SELECT
+        latitude,
+        longitude,
+        altitude
+    FROM vehicle_movement
+    WHERE vehicle_id = $1
+        AND sent_at IS NOT NULL
+        AND latitude IS NOT NULL
+        AND longitude IS NOT NULL
+    ORDER BY sent_at DESC
+    LIMIT 1
+    `
+
+	var pos types.Position
+	var altitude sql.NullInt16
+
+	err = db.QueryRow(q, vehicleID).Scan(&pos.Latitude, &pos.Longitude, &altitude)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return types.Position{}, fmt.Errorf("нет записей местоположения для транспорта с ID %d", vehicleID)
 		}
 		return types.Position{}, err
 	}
 
-	var pos types.Position
-	if latStr.Valid {
-		if v, err := strconv.ParseFloat(latStr.String, 64); err == nil {
-			pos.Latitude = v
-		}
-	}
-	if lonStr.Valid {
-		if v, err := strconv.ParseFloat(lonStr.String, 64); err == nil {
-			pos.Longitude = v
-		}
-	}
-	if altStr.Valid {
-		if v, err := strconv.ParseUint(altStr.String, 10, 32); err == nil {
-			pos.Altitude = uint32(v)
-		}
+	if altitude.Valid {
+		pos.Altitude = uint32(altitude.Int16)
 	}
 
 	return pos, nil

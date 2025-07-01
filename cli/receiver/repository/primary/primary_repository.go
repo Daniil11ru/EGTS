@@ -32,7 +32,6 @@ func (p *PrimaryRepository) GetVehiclesByOIDAndProviderID(OID uint32, providerID
 func (p *PrimaryRepository) AddIndefiniteVehicle(OID uint32, providerID int32) (int32, error) {
 	return p.Source.AddVehicle(types.Vehicle{
 		IMEI:             int64(OID),
-		OID:              sql.NullInt64{Int64: int64(OID), Valid: true},
 		Name:             sql.NullString{String: "", Valid: false},
 		ProviderID:       providerID,
 		ModerationStatus: types.ModerationStatusPending,
