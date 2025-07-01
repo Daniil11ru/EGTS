@@ -150,8 +150,8 @@ func (s *SavePacket) resolveModerationStatus(id int32) (types.ModerationStatus, 
 }
 
 func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
-	if data.Latitude == 0 || data.Longitude == 0 || data.OID == 0 {
-		return fmt.Errorf("широта, долгота и OID не должны быть пустыми")
+	if data.SatelliteCount == 0 || data.Latitude == 0 || data.Longitude == 0 || data.OID == 0 {
+		return fmt.Errorf("широта, долгота, OID и количество спутников не должны быть пустыми или иметь нулевое значение")
 	}
 
 	providerID, getProviderIDError := s.PrimaryRepository.GetProviderIDByIP(providerIP)
