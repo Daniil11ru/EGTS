@@ -72,7 +72,7 @@ func main() {
 		log.AddHook(hook)
 	}
 
-	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		cfg.Store["user"], cfg.Store["password"], cfg.Store["host"], cfg.Store["port"], cfg.Store["database"], cfg.Store["sslmode"])
 	applyMigrations(dbURL)
 
