@@ -6,10 +6,13 @@ WORKDIR /app
 
 COPY . .
 
+COPY cli/receiver/migrations /app/migrations
+
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make
 
 FROM busybox
 
+COPY --from=egts-builder /app/migrations /app/migrations
 COPY --from=egts-builder /app/bin /app/
 COPY --from=egts-builder /app/configs/config.docker.test.yaml /etc/egts-receviver/config.yaml
 

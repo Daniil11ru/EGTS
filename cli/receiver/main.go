@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -15,6 +16,10 @@ import (
 	"github.com/rifflock/lfshook"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
@@ -67,6 +72,10 @@ func main() {
 		log.AddHook(hook)
 	}
 
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		cfg.Store["user"], cfg.Store["password"], cfg.Store["host"], cfg.Store["port"], cfg.Store["database"], cfg.Store["sslmode"])
+	applyMigrations(dbURL)
+
 	connector := connector.Connector{}
 	connector.Connect(cfg.Store)
 
@@ -87,4 +96,26 @@ func main() {
 
 	srv := server.New(cfg.GetListenAddress(), cfg.GetEmptyConnectionTTL(), &savePacket, getIPWhiteList)
 	srv.Run()
+}
+
+func applyMigrations(databaseURL string) error {
+	m, err := migrate.New(
+		"file:///app/migrations",
+		databaseURL,
+	)
+	if err != nil {
+		return fmt.Errorf("ошибка инициализации миграций: %v", err)
+	}
+	defer m.Close()
+
+	if err := m.Up(); err != nil {
+		if err == migrate.ErrNoChange {
+			log.Info("Нет новых миграций для применения")
+			return nil
+		}
+		return fmt.Errorf("ошибка применения миграций: %v", err)
+	}
+
+	log.Info("Миграции успешно применены")
+	return nil
 }
