@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/daniil11ru/egts/cli/receiver/domain"
@@ -33,7 +34,7 @@ func New(addr string, ttl time.Duration, savePackage *domain.SavePacket, getIPWh
 	return &Server{Address: addr, TTL: ttl, SavePackage: savePackage, GetIPWhiteList: getIPWhiteList}
 }
 
-func (server *Server) getIPFromIPAndPort(ipAndPort string) (string, error) {
+func extractIp(ipAndPort string) (string, error) {
 	var re = regexp.MustCompile(`^((?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}):(\d{1,5})$`)
 	matches := re.FindStringSubmatch(ipAndPort)
 	if matches == nil {
@@ -63,27 +64,52 @@ func (server *Server) Run() {
 
 	for {
 		conn, err := server.Listener.Accept()
+		if err != nil {
+			log.WithField("err", err).Error("Ошибка соединения")
+			continue
+		}
 
-		IP, getIpFromIPAndPortErr := server.getIPFromIPAndPort(conn.RemoteAddr().String())
+		IP, getIpFromIPAndPortErr := extractIp(conn.RemoteAddr().String())
 		if getIpFromIPAndPortErr != nil {
 			log.Warn("Адрес отправителя не является IP-адресом")
+			conn.Close()
 			continue
 		}
 
 		isInWhiteList := false
-		for i := 0; i < len(whiteList); i++ {
-			if whiteList[i] == IP {
+	ipCheckLoop:
+		for _, entry := range whiteList {
+			if entry == IP {
+				isInWhiteList = true
+				break
+			}
+
+			if strings.Contains(entry, "*") {
+				partsEntry := strings.Split(entry, ".")
+				partsIP := strings.Split(IP, ".")
+
+				if partsEntry[len(partsEntry)-1] != "*" {
+					continue
+				}
+
+				prefixEntry := partsEntry[:len(partsEntry)-1]
+				if len(prefixEntry) > len(partsIP) {
+					continue
+				}
+
+				for i := 0; i < len(prefixEntry); i++ {
+					if prefixEntry[i] != partsIP[i] {
+						continue ipCheckLoop
+					}
+				}
 				isInWhiteList = true
 				break
 			}
 		}
-		if !isInWhiteList {
-			log.Warnf("IP %s не находится в белом списке", conn.RemoteAddr().String())
-			continue
-		}
 
-		if err != nil {
-			log.WithField("err", err).Error("Ошибка соединения")
+		if !isInWhiteList {
+			log.Warnf("IP %s не находится в белом списке", IP)
+			conn.Close()
 			continue
 		}
 
@@ -284,7 +310,7 @@ func (s *Server) handleAppData(conn net.Conn, pkg *egts.Package, receivedTimesta
 
 		exportPacket.OID = client
 		if isPkgSave && recStatus == egtsPcOk {
-			IP, getIPFromIPAndPortErr := s.getIPFromIPAndPort(conn.RemoteAddr().String())
+			IP, getIPFromIPAndPortErr := extractIp(conn.RemoteAddr().String())
 			if getIPFromIPAndPortErr != nil {
 				log.Warn("Адрес отправителя не является IP-адресом")
 			} else {
