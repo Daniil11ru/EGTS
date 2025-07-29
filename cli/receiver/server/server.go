@@ -44,6 +44,43 @@ func extractIp(ipAndPort string) (string, error) {
 	return matches[1], nil
 }
 
+func isInWhiteList(ip string, whiteList []string) bool {
+	isInWhiteList := false
+
+ipCheckLoop:
+	for _, entry := range whiteList {
+		if entry == ip {
+			isInWhiteList = true
+			break
+		}
+
+		if strings.Contains(entry, "*") {
+			partsEntry := strings.Split(entry, ".")
+			partsIP := strings.Split(ip, ".")
+
+			if partsEntry[len(partsEntry)-1] != "*" {
+				continue
+			}
+
+			prefixEntry := partsEntry[:len(partsEntry)-1]
+			if len(prefixEntry) > len(partsIP) {
+				continue
+			}
+
+			for i := 0; i < len(prefixEntry); i++ {
+				if prefixEntry[i] != partsIP[i] {
+					continue ipCheckLoop
+				}
+			}
+
+			isInWhiteList = true
+			break
+		}
+	}
+
+	return isInWhiteList
+}
+
 func (server *Server) Run() {
 	var err error
 	server.Listener, err = net.Listen("tcp", server.Address)
@@ -69,46 +106,15 @@ func (server *Server) Run() {
 			continue
 		}
 
-		IP, getIpFromIPAndPortErr := extractIp(conn.RemoteAddr().String())
+		ip, getIpFromIPAndPortErr := extractIp(conn.RemoteAddr().String())
 		if getIpFromIPAndPortErr != nil {
 			log.Warn("Адрес отправителя не является IP-адресом")
 			conn.Close()
 			continue
 		}
 
-		isInWhiteList := false
-	ipCheckLoop:
-		for _, entry := range whiteList {
-			if entry == IP {
-				isInWhiteList = true
-				break
-			}
-
-			if strings.Contains(entry, "*") {
-				partsEntry := strings.Split(entry, ".")
-				partsIP := strings.Split(IP, ".")
-
-				if partsEntry[len(partsEntry)-1] != "*" {
-					continue
-				}
-
-				prefixEntry := partsEntry[:len(partsEntry)-1]
-				if len(prefixEntry) > len(partsIP) {
-					continue
-				}
-
-				for i := 0; i < len(prefixEntry); i++ {
-					if prefixEntry[i] != partsIP[i] {
-						continue ipCheckLoop
-					}
-				}
-				isInWhiteList = true
-				break
-			}
-		}
-
-		if !isInWhiteList {
-			log.Warnf("IP %s не находится в белом списке", IP)
+		if !isInWhiteList(ip, whiteList) {
+			log.Warnf("IP %s не находится в белом списке", ip)
 			conn.Close()
 			continue
 		}
