@@ -3,6 +3,7 @@ package pg
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
@@ -305,30 +306,104 @@ func (p *PrimarySource) GetProviderByIP(ip string) (types.Provider, error) {
 		return types.Provider{}, err
 	}
 
-	const q = `
+	const exactQuery = `
         SELECT id, name, ip
         FROM provider
         WHERE ip = $1
     `
+	row := db.QueryRow(exactQuery, ip)
 
-	row := db.QueryRow(q, ip)
-	var pr types.Provider
-	var nullableIP sql.NullString
+	var exactProvider types.Provider
+	var exactNullableIP sql.NullString
 
-	if err := row.Scan(&pr.ID, &pr.Name, &nullableIP); err != nil {
-		if err == sql.ErrNoRows {
-			return types.Provider{}, fmt.Errorf("провайдер с IP %s не найден", ip)
+	err = row.Scan(&exactProvider.ID, &exactProvider.Name, &exactNullableIP)
+	if err == nil {
+		if exactNullableIP.Valid {
+			exactProvider.IP = exactNullableIP.String
 		}
+		return exactProvider, nil
+	} else if err != sql.ErrNoRows {
 		return types.Provider{}, err
 	}
 
-	if nullableIP.Valid {
-		pr.IP = nullableIP.String
-	} else {
-		pr.IP = ""
+	const maskQuery = `
+        SELECT id, name, ip
+        FROM provider
+        WHERE ip LIKE '%*%'
+    `
+	rows, err := db.Query(maskQuery)
+	if err != nil {
+		return types.Provider{}, err
+	}
+	defer rows.Close()
+
+	var matchingProviders []types.Provider
+	for rows.Next() {
+		var pr types.Provider
+		var nullableIP sql.NullString
+		if err := rows.Scan(&pr.ID, &pr.Name, &nullableIP); err != nil {
+			return types.Provider{}, err
+		}
+
+		if nullableIP.Valid {
+			pr.IP = nullableIP.String
+		} else {
+			continue
+		}
+
+		if ipMatchesMask(ip, pr.IP) {
+			matchingProviders = append(matchingProviders, pr)
+		}
 	}
 
-	return pr, nil
+	if err := rows.Err(); err != nil {
+		return types.Provider{}, err
+	}
+
+	switch len(matchingProviders) {
+	case 0:
+		return types.Provider{}, fmt.Errorf("провайдер с IP %s не найден", ip)
+	case 1:
+		return matchingProviders[0], nil
+	default:
+		ids := make([]int32, 0, len(matchingProviders))
+		for _, p := range matchingProviders {
+			ids = append(ids, p.ID)
+		}
+		return types.Provider{}, fmt.Errorf(
+			"найдено несколько провайдеров для IP %s: %v",
+			ip, ids,
+		)
+	}
+}
+
+func ipMatchesMask(ip, mask string) bool {
+	if !strings.Contains(mask, "*") {
+		return ip == mask
+	}
+
+	ipParts := strings.Split(ip, ".")
+	maskParts := strings.Split(mask, ".")
+
+	if len(ipParts) != 4 || len(maskParts) > 4 {
+		return false
+	}
+
+	for i, maskPart := range maskParts {
+		if i >= len(ipParts) {
+			return false
+		}
+
+		if maskPart == "*" {
+			continue
+		}
+
+		if maskPart != ipParts[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (p *PrimarySource) GetAllIPs() ([]string, error) {
