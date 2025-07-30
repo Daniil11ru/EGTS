@@ -3,11 +3,13 @@ package domain
 import (
 	"fmt"
 	"math/bits"
+	"strings"
 	"time"
 
 	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	util "github.com/daniil11ru/egts/cli/receiver/repository/util"
+	cron "github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,25 +19,82 @@ type SavePacket struct {
 	AddVehicleMovementMonthStart int
 	AddVehicleMovementMonthEnd   int
 
-	vehicleIDToLastPosition map[int32]types.Position3D
+	ipToProviderId          map[string]int32
+	vehicleIdToLastPosition map[int32]types.Position3D
+
+	cronScheduler *cron.Cron
 }
 
-func (domain *SavePacket) Initialize() error {
-	domain.vehicleIDToLastPosition = make(map[int32]types.Position3D)
+func (domain *SavePacket) fillIpToProviderId() error {
+	domain.ipToProviderId = make(map[string]int32)
+
+	providers, err := domain.PrimaryRepository.GetAllProviders()
+	if err != nil {
+		return fmt.Errorf("не удалось получить список провайдеров: %w", err)
+	}
+
+	for _, provider := range providers {
+		if !strings.Contains(provider.IP, "*") {
+			domain.ipToProviderId[provider.IP] = provider.ID
+		}
+	}
+
+	return nil
+}
+
+func (domain *SavePacket) fillVehicleIdToLastPosition() error {
+	domain.vehicleIdToLastPosition = make(map[int32]types.Position3D)
 
 	vehicles, getAllVehiclesErr := domain.PrimaryRepository.GetAllVehicles()
 	if getAllVehiclesErr != nil {
-		return fmt.Errorf("не удалось инициализировать кэш: %w", getAllVehiclesErr)
+		return fmt.Errorf("не удалось получить список транспорта: %w", getAllVehiclesErr)
 	}
 
 	for i := 0; i < len(vehicles); i++ {
 		lastPosition, getLastPositionErr := domain.PrimaryRepository.GetLastVehiclePosition(vehicles[i].ID)
 		if getLastPositionErr == nil {
-			domain.vehicleIDToLastPosition[vehicles[i].ID] = lastPosition
+			domain.vehicleIdToLastPosition[vehicles[i].ID] = lastPosition
 		}
 	}
 
 	return nil
+}
+
+func (domain *SavePacket) Initialize() error {
+	if err := domain.fillIpToProviderId(); err != nil {
+		return fmt.Errorf("не удалось инициализировать кэш провайдеров: %w", err)
+	}
+	if err := domain.fillVehicleIdToLastPosition(); err != nil {
+		return fmt.Errorf("не удалось инициализировать кэш транспорта: %w", err)
+	}
+
+	loc, _ := time.LoadLocation("Europe/Moscow")
+	domain.cronScheduler = cron.New(cron.WithLocation(loc))
+
+	_, err := domain.cronScheduler.AddFunc("0 3 * * *", func() {
+		logrus.Info("Запуск запланированного обновления кэша провайдеров")
+		if err := domain.fillIpToProviderId(); err != nil {
+			logrus.Errorf("Ошибка обновления кэша провайдеров: %v", err)
+		} else {
+			logrus.Info("Кэш провайдеров успешно обновлен")
+		}
+	})
+
+	if err != nil {
+		return fmt.Errorf("ошибка при настройке cron-задачи: %w", err)
+	}
+
+	domain.cronScheduler.Start()
+	logrus.Info("Запланировано ежедневное обновление кэша провайдеров в 03:00")
+
+	return nil
+}
+
+func (domain *SavePacket) Shutdown() {
+	if domain.cronScheduler != nil {
+		domain.cronScheduler.Stop()
+		logrus.Info("Cron-планировщик остановлен")
+	}
 }
 
 func isPrefixBytes(a, b uint64, n int) bool {
@@ -197,7 +256,7 @@ func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
 	}
 
 	currentPosition := types.Position3D{Latitude: data.Latitude, Longitude: data.Longitude, Altitude: data.Altitude}
-	lastPosition, OK := s.vehicleIDToLastPosition[vehicleID]
+	lastPosition, OK := s.vehicleIdToLastPosition[vehicleID]
 	if OK {
 		accuracy_meters := 10.0
 
@@ -213,7 +272,7 @@ func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
 			return nil
 		}
 	}
-	s.vehicleIDToLastPosition[vehicleID] = currentPosition
+	s.vehicleIdToLastPosition[vehicleID] = currentPosition
 
 	if _, err := s.PrimaryRepository.AddVehicleMovement(data, int(vehicleID)); err != nil {
 		return fmt.Errorf("не удалось сохранить телематические данные для транспорта с ID %d: %w", vehicleID, err)

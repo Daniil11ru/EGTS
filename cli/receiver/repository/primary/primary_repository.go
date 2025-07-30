@@ -44,6 +44,10 @@ func (p *PrimaryRepository) UpdateVehicleOID(id int32, OID uint32) error {
 	return p.Source.UpdateVehicleOID(id, OID)
 }
 
+func (p *PrimaryRepository) GetAllProviders() ([]types.Provider, error) {
+	return p.Source.GetAllProviders()
+}
+
 func (p *PrimaryRepository) GetProviderIDByIP(ip string) (int32, error) {
 	provider, err := p.Source.GetProviderByIP(ip)
 	return provider.ID, err

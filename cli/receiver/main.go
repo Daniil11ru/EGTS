@@ -86,17 +86,18 @@ func main() {
 
 	primaryRepository := repository.PrimaryRepository{Source: &primarySource}
 
-	savePacket := domain.SavePacket{
+	savePackage := domain.SavePacket{
 		PrimaryRepository:            primaryRepository,
 		AddVehicleMovementMonthStart: config.GetSaveTelematicsDataMonthStart(),
 		AddVehicleMovementMonthEnd:   config.GetSaveTelematicsDataMonthEnd(),
 	}
-	savePacket.Initialize()
+	savePackage.Initialize()
 	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
 
+	defer savePackage.Shutdown()
 	defer connector.Close()
 
-	srv := server.New(config.GetListenAddress(), config.GetEmptyConnectionTTL(), &savePacket, getIPWhiteList)
+	srv := server.New(config.GetListenAddress(), config.GetEmptyConnectionTTL(), &savePackage, getIPWhiteList)
 	srv.Run()
 
 	optimizeGeometry := domain.OptimizeGeometry{PrimaryRepository: primaryRepository}
