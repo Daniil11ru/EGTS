@@ -76,7 +76,7 @@ func main() {
 
 	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		config.Store["user"], config.Store["password"], config.Store["host"], config.Store["port"], config.Store["database"], config.Store["sslmode"])
-	applyMigrations(dbURL)
+	applyMigrations(config.MigrationsPath, dbURL)
 
 	connector := connector.Connector{}
 	connector.Connect(config.Store)
@@ -106,9 +106,9 @@ func main() {
 	select {}
 }
 
-func applyMigrations(databaseURL string) error {
+func applyMigrations(databaseURL string, migrationsPath string) error {
 	m, err := migrate.New(
-		"file:///app/migrations",
+		migrationsPath,
 		databaseURL,
 	)
 	if err != nil {

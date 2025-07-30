@@ -20,6 +20,7 @@ type Settings struct {
 	SaveTelematicsDataMonthStart   int               `yaml:"save_telematics_data_month_start"`
 	SaveTelematicsDataMonthEnd     int               `yaml:"save_telematics_data_month_end"`
 	OptimizeGeometryCronExpression string            `yaml:"optimize_geometry_cron_expression"`
+	MigrationsPath                 string            `yaml:"migrations_path"`
 }
 
 func (s *Settings) GetEmptyConnectionTTL() time.Duration {
