@@ -46,7 +46,7 @@ func (p *PrimarySource) GetAllVehicles() ([]types.Vehicle, error) {
 	var vehicles []types.Vehicle
 	for rows.Next() {
 		var v types.Vehicle
-		if err := rows.Scan(&v.ID, &v.IMEI, &v.Name, &v.ProviderID, &v.ModerationStatus); err != nil {
+		if err := rows.Scan(&v.ID, &v.IMEI, &v.OID, &v.Name, &v.ProviderID, &v.ModerationStatus); err != nil {
 			return nil, err
 		}
 		vehicles = append(vehicles, v)

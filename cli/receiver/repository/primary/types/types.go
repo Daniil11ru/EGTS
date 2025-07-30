@@ -18,7 +18,7 @@ const (
 func (ms *ModerationStatus) Scan(value interface{}) error {
 	b, ok := value.([]byte)
 	if !ok {
-		return fmt.Errorf("cannot scan ModerationStatus from %T", value)
+		return fmt.Errorf("невозможно извлечь ModerationStatus из %T", value)
 	}
 	*ms = ModerationStatus(string(b))
 	return nil
@@ -36,6 +36,7 @@ type Track2D struct {
 type Vehicle struct {
 	ID               int32
 	IMEI             int64
+	OID              sql.NullInt64
 	Name             sql.NullString
 	ProviderID       int32
 	ModerationStatus ModerationStatus

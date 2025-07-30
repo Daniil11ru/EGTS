@@ -14,6 +14,7 @@ import (
 	source "github.com/daniil11ru/egts/cli/receiver/source/primary/pg"
 
 	"github.com/rifflock/lfshook"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -86,18 +87,20 @@ func main() {
 
 	primaryRepository := repository.PrimaryRepository{Source: &primarySource}
 
-	savePackage := domain.SavePacket{
+	savePacket := domain.SavePacket{
 		PrimaryRepository:            primaryRepository,
 		AddVehicleMovementMonthStart: config.GetSaveTelematicsDataMonthStart(),
 		AddVehicleMovementMonthEnd:   config.GetSaveTelematicsDataMonthEnd(),
 	}
-	savePackage.Initialize()
+	if err := savePacket.Initialize(); err != nil {
+		logrus.Error("Не удалось инициализировать кэш: ", err)
+	}
 	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
 
-	defer savePackage.Shutdown()
+	defer savePacket.Shutdown()
 	defer connector.Close()
 
-	srv := server.New(config.GetListenAddress(), config.GetEmptyConnectionTTL(), &savePackage, getIPWhiteList)
+	srv := server.New(config.GetListenAddress(), config.GetEmptyConnectionTTL(), &savePacket, getIPWhiteList)
 	srv.Run()
 
 	optimizeGeometry := domain.OptimizeGeometry{PrimaryRepository: primaryRepository}

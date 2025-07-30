@@ -64,11 +64,13 @@ func (domain *SavePacket) Initialize() error {
 	if err := domain.fillIpToProviderId(); err != nil {
 		return fmt.Errorf("не удалось инициализировать кэш провайдеров: %w", err)
 	}
+
 	if err := domain.fillVehicleIdToLastPosition(); err != nil {
 		return fmt.Errorf("не удалось инициализировать кэш транспорта: %w", err)
 	}
 
 	loc, _ := time.LoadLocation("Europe/Moscow")
+
 	domain.cronScheduler = cron.New(cron.WithLocation(loc))
 
 	_, err := domain.cronScheduler.AddFunc("0 3 * * *", func() {
