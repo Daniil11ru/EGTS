@@ -1,13 +1,15 @@
 host: "127.0.0.1"
 port: "7001"
-conn_ttl: 5
+connection_ttl: 5
 log_level: "DEBUG"
 log_file_path: "logs/app_test.log"
 log_max_age_days: 1
 save_telematics_data_month_start: 5
 save_telematics_data_month_end: 9
+optimize_geometry_cron_expression: "0 2 * * *"
 
 storage:
+  driver: "postgres"
   host: "localhost"
   port: "5432"
   user: "postgres"

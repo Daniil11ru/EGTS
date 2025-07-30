@@ -28,6 +28,11 @@ func (ms ModerationStatus) Value() (driver.Value, error) {
 	return string(ms), nil
 }
 
+type Track2D struct {
+	VehicleID int32
+	Movements []Movement2D
+}
+
 type Vehicle struct {
 	ID               int32
 	IMEI             int64
@@ -42,13 +47,23 @@ type Provider struct {
 	IP   string
 }
 
-type Position struct {
+type Movement2D struct {
+	Position2D
+	ID int32
+}
+
+type Position2D struct {
+	Latitude  float64
+	Longitude float64
+}
+
+type Position3D struct {
 	Latitude  float64
 	Longitude float64
 	Altitude  uint32
 }
 
-func (p *Position) EqualsTo(position *Position, accuracy_meters float64) bool {
+func (p *Position3D) EqualsTo(position *Position3D, accuracy_meters float64) bool {
 	if p == nil || position == nil {
 		return false
 	}
@@ -71,7 +86,7 @@ func (p *Position) EqualsTo(position *Position, accuracy_meters float64) bool {
 	return dist <= accuracy_meters
 }
 
-func (p *Position) EqualsHorizontallyTo(position *Position, accuracy_meters float64) bool {
+func (p *Position3D) EqualsHorizontallyTo(position *Position3D, accuracy_meters float64) bool {
 	if p == nil || position == nil {
 		return false
 	}

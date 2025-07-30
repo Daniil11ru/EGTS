@@ -17,11 +17,11 @@ type SavePacket struct {
 	AddVehicleMovementMonthStart int
 	AddVehicleMovementMonthEnd   int
 
-	vehicleIDToLastPosition map[int32]types.Position
+	vehicleIDToLastPosition map[int32]types.Position3D
 }
 
 func (domain *SavePacket) Initialize() error {
-	domain.vehicleIDToLastPosition = make(map[int32]types.Position)
+	domain.vehicleIDToLastPosition = make(map[int32]types.Position3D)
 
 	vehicles, getAllVehiclesErr := domain.PrimaryRepository.GetAllVehicles()
 	if getAllVehiclesErr != nil {
@@ -196,7 +196,7 @@ func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
 		return nil
 	}
 
-	currentPosition := types.Position{Latitude: data.Latitude, Longitude: data.Longitude, Altitude: data.Altitude}
+	currentPosition := types.Position3D{Latitude: data.Latitude, Longitude: data.Longitude, Altitude: data.Altitude}
 	lastPosition, OK := s.vehicleIDToLastPosition[vehicleID]
 	if OK {
 		accuracy_meters := 10.0

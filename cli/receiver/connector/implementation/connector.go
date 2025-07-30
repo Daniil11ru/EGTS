@@ -1,4 +1,4 @@
-package postgresql
+package implementation
 
 import (
 	"database/sql"
@@ -9,6 +9,7 @@ import (
 )
 
 type Settings struct {
+	Driver   string
 	Host     string
 	Port     string
 	User     string
@@ -33,6 +34,7 @@ func getOptionValue(optionName string, optionDefaultValue string, settings map[s
 }
 
 func (c *Connector) FillSettings(settings map[string]string) {
+	c.settings.Driver = getOptionValue("driver", "postgres", settings)
 	c.settings.Host = getOptionValue("host", "localhost", settings)
 	c.settings.Port = getOptionValue("port", "5432", settings)
 	c.settings.User = getOptionValue("user", "postgres", settings)
@@ -51,8 +53,13 @@ func (c *Connector) Connect(settings map[string]string) error {
 
 	connStr := fmt.Sprintf("dbname=%s host=%s port=%s user=%s password=%s sslmode=%s",
 		c.settings.Database, c.settings.Host, c.settings.Port, c.settings.User, c.settings.Password, c.settings.SSLMode)
-	if c.connection, err = sql.Open("postgres", connStr); err != nil {
-		return fmt.Errorf("ошибка подключения к PostgreSQL: %v", err)
+
+	if c.settings.Driver == "postgres" {
+		if c.connection, err = sql.Open("postgres", connStr); err != nil {
+			return fmt.Errorf("ошибка подключения к PostgreSQL: %v", err)
+		}
+	} else {
+		return fmt.Errorf("неизвестный драйвер базы данных: %s", c.settings.Driver)
 	}
 
 	if err = c.connection.Ping(); err != nil {

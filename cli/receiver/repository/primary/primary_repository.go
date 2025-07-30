@@ -2,6 +2,7 @@ package primary
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	"github.com/daniil11ru/egts/cli/receiver/repository/util"
@@ -52,6 +53,14 @@ func (p *PrimaryRepository) AddVehicleMovement(data *util.NavigationRecord, vehi
 	return p.Source.AddVehicleMovement(data, vehicleID)
 }
 
-func (p *PrimaryRepository) GetLastVehiclePosition(vehicle_id int32) (types.Position, error) {
-	return p.Source.GetLastVehiclePosition(vehicle_id)
+func (p *PrimaryRepository) GetLastVehiclePosition(vehicleID int32) (types.Position3D, error) {
+	return p.Source.GetLastVehiclePosition(vehicleID)
+}
+
+func (p *PrimaryRepository) GetTracks2DOfAllVehicles(after, before time.Time) ([]types.Track2D, error) {
+	return p.Source.GetTracks2DOfAllVehicles(after, before)
+}
+
+func (p *PrimaryRepository) DeleteVehicleMovement(vehicleMovementID int32) error {
+	return p.Source.DeleteVehicleMovement(vehicleMovementID)
 }

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/daniil11ru/egts/cli/receiver/config"
-	connector "github.com/daniil11ru/egts/cli/receiver/connector/postgresql"
+	connector "github.com/daniil11ru/egts/cli/receiver/connector/implementation"
 	"github.com/daniil11ru/egts/cli/receiver/domain"
 	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
 	"github.com/daniil11ru/egts/cli/receiver/server"
@@ -20,6 +20,8 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+
+	cron "github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -31,19 +33,19 @@ func main() {
 		log.Fatalf("Не задан путь до конфига")
 	}
 
-	cfg, err := config.New(cfgFilePath)
+	config, err := config.New(cfgFilePath)
 	if err != nil {
 		log.Fatalf("Ошибка парсинга конфига: %v", err)
 	}
 
-	log.SetLevel(cfg.GetLogLevel())
+	log.SetLevel(config.GetLogLevel())
 
 	consoleFmt := &log.TextFormatter{ForceColors: true, FullTimestamp: false}
 	log.SetFormatter(consoleFmt)
 	log.SetOutput(os.Stdout)
 
-	if cfg.LogFilePath != "" {
-		logDir := filepath.Dir(cfg.LogFilePath)
+	if config.LogFilePath != "" {
+		logDir := filepath.Dir(config.LogFilePath)
 		if _, err := os.Stat(logDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 				log.Fatalf("Не получилось создать директорию для логов: %v", err)
@@ -51,10 +53,10 @@ func main() {
 		}
 
 		lumberjackLogger := &lumberjack.Logger{
-			Filename:   cfg.LogFilePath,
+			Filename:   config.LogFilePath,
 			MaxSize:    100,
 			MaxBackups: 366,
-			MaxAge:     cfg.LogMaxAgeDays,
+			MaxAge:     config.LogMaxAgeDays,
 			Compress:   true,
 		}
 
@@ -73,11 +75,11 @@ func main() {
 	}
 
 	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		cfg.Store["user"], cfg.Store["password"], cfg.Store["host"], cfg.Store["port"], cfg.Store["database"], cfg.Store["sslmode"])
+		config.Store["user"], config.Store["password"], config.Store["host"], config.Store["port"], config.Store["database"], config.Store["sslmode"])
 	applyMigrations(dbURL)
 
 	connector := connector.Connector{}
-	connector.Connect(cfg.Store)
+	connector.Connect(config.Store)
 
 	primarySource := source.PrimarySource{}
 	primarySource.Initialize(&connector)
@@ -86,16 +88,22 @@ func main() {
 
 	savePacket := domain.SavePacket{
 		PrimaryRepository:            primaryRepository,
-		AddVehicleMovementMonthStart: cfg.GetSaveTelematicsDataMonthStart(),
-		AddVehicleMovementMonthEnd:   cfg.GetSaveTelematicsDataMonthEnd(),
+		AddVehicleMovementMonthStart: config.GetSaveTelematicsDataMonthStart(),
+		AddVehicleMovementMonthEnd:   config.GetSaveTelematicsDataMonthEnd(),
 	}
 	savePacket.Initialize()
 	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
 
 	defer connector.Close()
 
-	srv := server.New(cfg.GetListenAddress(), cfg.GetEmptyConnectionTTL(), &savePacket, getIPWhiteList)
+	srv := server.New(config.GetListenAddress(), config.GetEmptyConnectionTTL(), &savePacket, getIPWhiteList)
 	srv.Run()
+
+	optimizeGeometry := domain.OptimizeGeometry{PrimaryRepository: primaryRepository}
+	c := cron.New()
+	c.AddFunc(config.OptimizeGeometryCronExpression, func() { optimizeGeometry.Run() })
+	c.Start()
+	select {}
 }
 
 func applyMigrations(databaseURL string) error {

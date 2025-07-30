@@ -414,10 +414,10 @@ func (p *PrimarySource) AddVehicleMovement(data *util.NavigationRecord, vehicleI
 	return id, nil
 }
 
-func (p *PrimarySource) GetLastVehiclePosition(vehicleID int32) (types.Position, error) {
+func (p *PrimarySource) GetLastVehiclePosition(vehicleID int32) (types.Position3D, error) {
 	db, err := p.db()
 	if err != nil {
-		return types.Position{}, err
+		return types.Position3D{}, err
 	}
 
 	const q = `
@@ -434,15 +434,15 @@ func (p *PrimarySource) GetLastVehiclePosition(vehicleID int32) (types.Position,
     LIMIT 1
     `
 
-	var pos types.Position
+	var pos types.Position3D
 	var altitude sql.NullInt16
 
 	err = db.QueryRow(q, vehicleID).Scan(&pos.Latitude, &pos.Longitude, &altitude)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return types.Position{}, fmt.Errorf("нет записей местоположения для транспорта с ID %d", vehicleID)
+			return types.Position3D{}, fmt.Errorf("нет записей местоположения для транспорта с ID %d", vehicleID)
 		}
-		return types.Position{}, err
+		return types.Position3D{}, err
 	}
 
 	if altitude.Valid {
@@ -450,4 +450,101 @@ func (p *PrimarySource) GetLastVehiclePosition(vehicleID int32) (types.Position,
 	}
 
 	return pos, nil
+}
+
+func (p *PrimarySource) GetTracks2DOfAllVehicles(after, before time.Time) ([]types.Track2D, error) {
+	db, err := p.db()
+	if err != nil {
+		return nil, err
+	}
+
+	const q = `
+        SELECT 
+			id,
+            vehicle_id,
+            latitude,
+            longitude
+        FROM vehicle_movement
+        WHERE 
+            received_at BETWEEN $1 AND $2
+            AND latitude IS NOT NULL
+            AND longitude IS NOT NULL
+        ORDER BY vehicle_id, received_at ASC
+    `
+
+	rows, err := db.Query(q, after, before)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
+	}
+	defer rows.Close()
+
+	var tracks []types.Track2D
+	var currentTrack *types.Track2D = nil
+
+	for rows.Next() {
+		var (
+			id        int32
+			vehicleID int32
+			lat       float64
+			lon       float64
+		)
+
+		if err := rows.Scan(&id, &vehicleID, &lat, &lon); err != nil {
+			return nil, fmt.Errorf("ошибка чтения строки: %v", err)
+		}
+
+		if currentTrack == nil || currentTrack.VehicleID != vehicleID {
+			if currentTrack != nil {
+				tracks = append(tracks, *currentTrack)
+			}
+
+			currentTrack = &types.Track2D{
+				VehicleID: vehicleID,
+				Movements: []types.Movement2D{},
+			}
+		}
+
+		currentTrack.Movements = append(currentTrack.Movements, types.Movement2D{
+			ID: id,
+			Position2D: types.Position2D{
+				Latitude:  lat,
+				Longitude: lon,
+			},
+		})
+	}
+
+	if currentTrack != nil {
+		tracks = append(tracks, *currentTrack)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка обработки результатов: %v", err)
+	}
+
+	return tracks, nil
+}
+
+func (p *PrimarySource) DeleteVehicleMovement(vehicleMovementID int32) error {
+	db, err := p.db()
+	if err != nil {
+		return err
+	}
+
+	const q = "DELETE FROM vehicle_movement WHERE id = $1"
+
+	result, err := db.Exec(q, vehicleMovementID)
+	if err != nil {
+		return fmt.Errorf("ошибка выполнения запроса удаления: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("ошибка получения количества удаленных строк: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("запись о перемещении транспорта с ID %d не найдена", vehicleMovementID)
+	}
+
+	return nil
 }

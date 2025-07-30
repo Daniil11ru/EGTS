@@ -1,6 +1,8 @@
 package primary
 
 import (
+	"time"
+
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	"github.com/daniil11ru/egts/cli/receiver/repository/util"
@@ -19,5 +21,7 @@ type PrimarySource interface {
 	GetProviderByIP(ip string) (types.Provider, error)
 	GetAllIPs() ([]string, error)
 	AddVehicleMovement(data *util.NavigationRecord, vehicleID int) (int32, error)
-	GetLastVehiclePosition(vehicle_id int32) (types.Position, error)
+	GetLastVehiclePosition(vehicleID int32) (types.Position3D, error)
+	GetTracks2DOfAllVehicles(after, before time.Time) ([]types.Track2D, error)
+	DeleteVehicleMovement(vehicleMovementID int32) error
 }

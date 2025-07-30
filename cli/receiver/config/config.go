@@ -10,19 +10,20 @@ import (
 )
 
 type Settings struct {
-	Host                         string            `yaml:"host"`
-	Port                         string            `yaml:"port"`
-	ConnTTL                      int               `yaml:"conn_ttl"`
-	LogLevel                     string            `yaml:"log_level"`
-	LogFilePath                  string            `yaml:"log_file_path"`
-	LogMaxAgeDays                int               `yaml:"log_max_age_days"`
-	Store                        map[string]string `yaml:"storage"`
-	SaveTelematicsDataMonthStart int               `yaml:"save_telematics_data_month_start"`
-	SaveTelematicsDataMonthEnd   int               `yaml:"save_telematics_data_month_end"`
+	Host                           string            `yaml:"host"`
+	Port                           string            `yaml:"port"`
+	ConnectionTTL                  int               `yaml:"connection_ttl"`
+	LogLevel                       string            `yaml:"log_level"`
+	LogFilePath                    string            `yaml:"log_file_path"`
+	LogMaxAgeDays                  int               `yaml:"log_max_age_days"`
+	Store                          map[string]string `yaml:"storage"`
+	SaveTelematicsDataMonthStart   int               `yaml:"save_telematics_data_month_start"`
+	SaveTelematicsDataMonthEnd     int               `yaml:"save_telematics_data_month_end"`
+	OptimizeGeometryCronExpression string            `yaml:"optimize_geometry_cron_expression"`
 }
 
 func (s *Settings) GetEmptyConnectionTTL() time.Duration {
-	return time.Duration(s.ConnTTL) * time.Second
+	return time.Duration(s.ConnectionTTL) * time.Second
 }
 func (s *Settings) GetListenAddress() string {
 	return s.Host + ":" + s.Port
@@ -65,13 +66,13 @@ func New(confPath string) (Settings, error) {
 	}
 
 	if c.SaveTelematicsDataMonthStart < 1 || c.SaveTelematicsDataMonthStart > 12 || c.SaveTelematicsDataMonthEnd < 1 || c.SaveTelematicsDataMonthEnd > 12 {
-		log.Errorf("Invalid SaveTelematicsDataMonthStart (%d) or SaveTelematicsDataMonthEnd (%d). Values must be between 1 and 12. Defaulting to May (5) and September (9).", c.SaveTelematicsDataMonthStart, c.SaveTelematicsDataMonthEnd)
+		log.Errorf("Некорректное значение SaveTelematicsDataMonthStart (%d) или SaveTelematicsDataMonthEnd (%d). Значение не должно быть меньше 1 и превышать 12. В качестве значений по умолчению взяты май (5) и сентябрь (9).", c.SaveTelematicsDataMonthStart, c.SaveTelematicsDataMonthEnd)
 		c.SaveTelematicsDataMonthStart = 5
 		c.SaveTelematicsDataMonthEnd = 9
 	}
 
 	if c.SaveTelematicsDataMonthStart > c.SaveTelematicsDataMonthEnd {
-		log.Errorf("SaveTelematicsDataMonthStart (%d) cannot be after SaveTelematicsDataMonthEnd (%d). Defaulting to May (5) and September (9).", c.SaveTelematicsDataMonthStart, c.SaveTelematicsDataMonthEnd)
+		log.Errorf("SaveTelematicsDataMonthStart (%d) не может превышать SaveTelematicsDataMonthEnd (%d). В качестве значений по умолчению взяты май (5) и сентябрь (9).", c.SaveTelematicsDataMonthStart, c.SaveTelematicsDataMonthEnd)
 		c.SaveTelematicsDataMonthStart = 5
 		c.SaveTelematicsDataMonthEnd = 9
 	}
