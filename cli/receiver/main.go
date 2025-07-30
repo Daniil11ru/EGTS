@@ -80,7 +80,9 @@ func main() {
 	applyMigrations(config.MigrationsPath, dbURL)
 
 	connector := connector.Connector{}
-	connector.Connect(config.Store)
+	if err := connector.Connect(config.Store); err != nil {
+		logrus.Fatalf("Не удалось подключиться к хранилищу: %v", err)
+	}
 
 	primarySource := source.PrimarySource{}
 	primarySource.Initialize(&connector)
@@ -93,7 +95,7 @@ func main() {
 		AddVehicleMovementMonthEnd:   config.GetSaveTelematicsDataMonthEnd(),
 	}
 	if err := savePacket.Initialize(); err != nil {
-		logrus.Error("Не удалось инициализировать кэш: ", err)
+		logrus.Errorf("Не удалось инициализировать кэш: %v", err)
 	}
 	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
 
