@@ -14,7 +14,6 @@ import (
 	source "github.com/daniil11ru/egts/cli/receiver/source/primary/pg"
 
 	"github.com/rifflock/lfshook"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -81,7 +80,7 @@ func main() {
 
 	connector := connector.Connector{}
 	if err := connector.Connect(config.Store); err != nil {
-		logrus.Fatalf("Не удалось подключиться к хранилищу: %v", err)
+		log.Fatalf("Не удалось подключиться к хранилищу: %v", err)
 	}
 
 	primarySource := source.PrimarySource{}
@@ -95,7 +94,7 @@ func main() {
 		AddVehicleMovementMonthEnd:   config.GetSaveTelematicsDataMonthEnd(),
 	}
 	if err := savePacket.Initialize(); err != nil {
-		logrus.Errorf("Не удалось инициализировать кэш: %v", err)
+		log.Errorf("Не удалось инициализировать кэш: %v", err)
 	}
 	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
 
