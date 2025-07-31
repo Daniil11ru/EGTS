@@ -69,7 +69,10 @@ func (domain *SavePacket) Initialize() error {
 		return fmt.Errorf("не удалось инициализировать кэш транспорта: %w", err)
 	}
 
-	loc, _ := time.LoadLocation("Europe/Moscow")
+	loc, loadLocationErr := time.LoadLocation("Europe/Moscow")
+	if loadLocationErr != nil {
+		return fmt.Errorf("не удалось загрузить временную зону Europe/Moscow: %w", loadLocationErr)
+	}
 	domain.cronScheduler = cron.New(cron.WithLocation(loc))
 
 	_, err := domain.cronScheduler.AddFunc("0 3 * * *", func() {

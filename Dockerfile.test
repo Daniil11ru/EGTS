@@ -16,4 +16,7 @@ COPY --from=egts-builder /app/migrations /app/migrations
 COPY --from=egts-builder /app/bin /app/
 COPY --from=egts-builder /app/configs/config.docker.test.yaml /etc/egts-receviver/config.yaml
 
+COPY --from=egts-builder /usr/local/go/lib/time/zoneinfo.zip /
+ENV ZONEINFO=/zoneinfo.zip
+
 ENTRYPOINT ["/app/receiver", "-c", "/etc/egts-receviver/config.yaml"]

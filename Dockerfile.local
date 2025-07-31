@@ -13,4 +13,7 @@ FROM busybox
 COPY --from=egts-builder /app/bin /app/
 COPY --from=egts-builder /app/configs/config.docker.yaml /etc/egts-receviver/config.yaml
 
+COPY --from=egts-builder /usr/local/go/lib/time/zoneinfo.zip /
+ENV ZONEINFO=/zoneinfo.zip
+
 ENTRYPOINT ["/app/receiver", "-c", "/etc/egts-receviver/config.yaml"]
