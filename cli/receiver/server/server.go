@@ -81,11 +81,11 @@ ipCheckLoop:
 	return isInWhiteList
 }
 
-func (server *Server) Run() {
+func (server *Server) Run() error {
 	var err error
 	server.Listener, err = net.Listen("tcp", server.Address)
 	if err != nil {
-		log.Fatalf("Не удалось открыть соединение: %v", err)
+		return fmt.Errorf("не удалось открыть соединение: %w", err)
 	}
 	defer server.Listener.Close()
 
@@ -94,8 +94,7 @@ func (server *Server) Run() {
 
 	whiteList, err := server.GetIPWhiteList.Run()
 	if err != nil || len(whiteList) == 0 {
-		log.Error("Не удалось получить белый список IP")
-		return
+		return fmt.Errorf("не удалось получить белый список IP: %w", err)
 	}
 	log.Debug("Белый список IP: ", whiteList)
 
@@ -119,14 +118,7 @@ func (server *Server) Run() {
 			continue
 		}
 
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					log.Errorf("Ошибка при обработке пакета: %v", r)
-				}
-			}()
-			server.handleConnection(conn)
-		}()
+		server.handleConnection(conn)
 	}
 }
 

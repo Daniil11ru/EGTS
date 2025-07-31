@@ -30,12 +30,12 @@ func main() {
 	flag.Parse()
 
 	if cfgFilePath == "" {
-		log.Fatalf("Не задан путь до конфига")
+		log.Error("Не задан путь до конфига")
 	}
 
 	config, err := config.New(cfgFilePath)
 	if err != nil {
-		log.Fatalf("Ошибка парсинга конфига: %v", err)
+		log.Errorf("Ошибка парсинга конфига: %v", err)
 	}
 
 	log.SetLevel(config.GetLogLevel())
@@ -96,6 +96,7 @@ func main() {
 	}
 	if err := savePacket.Initialize(); err != nil {
 		log.Fatalf("Не удалось инициализировать кэш: %v", err)
+		return
 	}
 
 	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
@@ -104,7 +105,11 @@ func main() {
 	defer connector.Close()
 
 	srv := server.New(config.GetListenAddress(), config.GetEmptyConnectionTTL(), &savePacket, getIPWhiteList)
-	srv.Run()
+	runServerErr := srv.Run()
+	if runServerErr != nil {
+		log.Fatalf("Не удалось запустить сервер: %v", err)
+		return
+	}
 
 	optimizeGeometry := domain.OptimizeGeometry{PrimaryRepository: primaryRepository}
 	c := cron.New()
