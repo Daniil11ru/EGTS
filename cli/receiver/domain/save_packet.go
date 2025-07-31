@@ -70,7 +70,6 @@ func (domain *SavePacket) Initialize() error {
 	}
 
 	loc, _ := time.LoadLocation("Europe/Moscow")
-
 	domain.cronScheduler = cron.New(cron.WithLocation(loc))
 
 	_, err := domain.cronScheduler.AddFunc("0 3 * * *", func() {

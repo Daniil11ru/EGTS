@@ -25,13 +25,13 @@ const (
 type Server struct {
 	Address        string
 	TTL            time.Duration
-	SavePackage    *domain.SavePacket
+	SavePacket     *domain.SavePacket
 	Listener       net.Listener
 	GetIPWhiteList domain.GetIPWhiteList
 }
 
-func New(addr string, ttl time.Duration, savePackage *domain.SavePacket, getIPWhiteList domain.GetIPWhiteList) *Server {
-	return &Server{Address: addr, TTL: ttl, SavePackage: savePackage, GetIPWhiteList: getIPWhiteList}
+func New(addr string, ttl time.Duration, savePacket *domain.SavePacket, getIPWhiteList domain.GetIPWhiteList) *Server {
+	return &Server{Address: addr, TTL: ttl, SavePacket: savePacket, GetIPWhiteList: getIPWhiteList}
 }
 
 func extractIp(ipAndPort string) (string, error) {
@@ -119,7 +119,14 @@ func (server *Server) Run() {
 			continue
 		}
 
-		go server.handleConnection(conn)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Errorf("Ошибка при обработке пакета: %v", r)
+				}
+			}()
+			server.handleConnection(conn)
+		}()
 	}
 }
 
@@ -322,7 +329,7 @@ func (s *Server) handleAppData(conn net.Conn, pkg *egts.Package, receivedTimesta
 			} else {
 				pkt := exportPacket
 				go func() {
-					if err := s.SavePackage.Run(&pkt, IP); err != nil {
+					if err := s.SavePacket.Run(&pkt, IP); err != nil {
 						log.Warnf("Телематические данные не были сохранены: %s", err)
 					}
 				}()

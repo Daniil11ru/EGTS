@@ -81,6 +81,7 @@ func main() {
 	connector := connector.Connector{}
 	if err := connector.Connect(config.Store); err != nil {
 		log.Fatalf("Не удалось подключиться к хранилищу: %v", err)
+		return
 	}
 
 	primarySource := source.PrimarySource{}
@@ -94,8 +95,9 @@ func main() {
 		AddVehicleMovementMonthEnd:   config.GetSaveTelematicsDataMonthEnd(),
 	}
 	if err := savePacket.Initialize(); err != nil {
-		log.Errorf("Не удалось инициализировать кэш: %v", err)
+		log.Fatalf("Не удалось инициализировать кэш: %v", err)
 	}
+
 	getIPWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
 
 	defer savePacket.Shutdown()
