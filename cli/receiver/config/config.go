@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Settings struct {
+type Config struct {
 	Host                           string            `yaml:"host"`
 	Port                           string            `yaml:"port"`
 	ConnectionTTL                  int               `yaml:"connection_ttl"`
@@ -23,14 +23,14 @@ type Settings struct {
 	MigrationsPath                 string            `yaml:"migrations_path"`
 }
 
-func (s *Settings) GetEmptyConnectionTTL() time.Duration {
+func (s *Config) GetEmptyConnectionTTL() time.Duration {
 	return time.Duration(s.ConnectionTTL) * time.Second
 }
-func (s *Settings) GetListenAddress() string {
+func (s *Config) GetListenAddress() string {
 	return s.Host + ":" + s.Port
 }
 
-func (s *Settings) GetLogLevel() log.Level {
+func (s *Config) GetLogLevel() log.Level {
 	var lvl log.Level
 
 	switch s.LogLevel {
@@ -48,9 +48,9 @@ func (s *Settings) GetLogLevel() log.Level {
 	return lvl
 }
 
-func New(confPath string) (Settings, error) {
-	c := Settings{}
-	data, err := os.ReadFile(confPath)
+func NewConfig(configPath string) (Config, error) {
+	c := Config{}
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return c, err
 	}
@@ -81,10 +81,10 @@ func New(confPath string) (Settings, error) {
 	return c, err
 }
 
-func (s *Settings) GetSaveTelematicsDataMonthStart() int {
+func (s *Config) GetSaveTelematicsDataMonthStart() int {
 	return s.SaveTelematicsDataMonthStart
 }
 
-func (s *Settings) GetSaveTelematicsDataMonthEnd() int {
+func (s *Config) GetSaveTelematicsDataMonthEnd() int {
 	return s.SaveTelematicsDataMonthEnd
 }

@@ -30,7 +30,7 @@ type Server struct {
 	GetIPWhiteList domain.GetIPWhiteList
 }
 
-func New(addr string, ttl time.Duration, savePacket *domain.SavePacket, getIPWhiteList domain.GetIPWhiteList) *Server {
+func NewServer(addr string, ttl time.Duration, savePacket *domain.SavePacket, getIPWhiteList domain.GetIPWhiteList) *Server {
 	return &Server{Address: addr, TTL: ttl, SavePacket: savePacket, GetIPWhiteList: getIPWhiteList}
 }
 
@@ -90,7 +90,6 @@ func (server *Server) Run() error {
 	defer server.Listener.Close()
 
 	log.WithField("addr", server.Address).Info("Запущен сервер")
-	log.Debug("TTL: ", server.TTL)
 
 	whiteList, err := server.GetIPWhiteList.Run()
 	if err != nil || len(whiteList) == 0 {
