@@ -1,10 +1,19 @@
 package response
 
-import "github.com/daniil11ru/egts/cli/receiver/api/model"
+import (
+	"time"
+)
+
+type Location struct {
+	Latitude   float64   `json:"latitude"`
+	Longitude  float64   `json:"longitude"`
+	SentAt     time.Time `json:"sent_at"`
+	ReceivedAt time.Time `json:"received_at"`
+}
 
 type VehicleTrack struct {
-	VehicleId int32            `json:"vehicle_id"`
-	Locations []model.Location `json:"locations"`
+	VehicleId int32      `json:"vehicle_id"`
+	Locations []Location `json:"locations"`
 }
 
 type GetLocations struct {

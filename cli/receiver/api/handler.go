@@ -7,7 +7,6 @@ import (
 
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/request"
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/response"
-	"github.com/daniil11ru/egts/cli/receiver/api/model"
 	"github.com/daniil11ru/egts/cli/receiver/api/repository"
 	"github.com/gin-gonic/gin"
 )
@@ -87,10 +86,10 @@ func (h *Handler) GetLocations(c *gin.Context) {
 		if !exists {
 			track = response.VehicleTrack{
 				VehicleId: loc.VehicleId,
-				Locations: []model.Location{},
+				Locations: []response.Location{},
 			}
 		}
-		track.Locations = append(track.Locations, loc)
+		track.Locations = append(track.Locations, response.Location{Latitude: loc.Latitude, Longitude: loc.Longitude, SentAt: loc.SentAt, ReceivedAt: loc.ReceivedAt})
 		tracks[loc.VehicleId] = track
 	}
 
