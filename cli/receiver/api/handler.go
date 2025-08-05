@@ -48,6 +48,8 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 func (h *Handler) GetLocations(c *gin.Context) {
 	request := request.GetLocations{}
 
+	const timeLayout = "02.01.2006 15:04:05"
+
 	if vehicleIdStr := c.Query("vehicle_id"); vehicleIdStr != "" {
 		vehicleId, err := strconv.Atoi(vehicleIdStr)
 		if err == nil {
@@ -56,25 +58,25 @@ func (h *Handler) GetLocations(c *gin.Context) {
 		}
 	}
 	if sentBeforeStr := c.Query("sent_before"); sentBeforeStr != "" {
-		sentBefore, err := time.Parse(time.RFC3339, sentBeforeStr)
+		sentBefore, err := time.Parse(timeLayout, sentBeforeStr)
 		if err == nil {
 			request.SentBefore = &sentBefore
 		}
 	}
 	if sentAfterStr := c.Query("sent_after"); sentAfterStr != "" {
-		sentAfter, err := time.Parse(time.RFC3339, sentAfterStr)
+		sentAfter, err := time.Parse(timeLayout, sentAfterStr)
 		if err == nil {
 			request.SentAfter = &sentAfter
 		}
 	}
 	if receivedBeforeStr := c.Query("received_before"); receivedBeforeStr != "" {
-		receivedBefore, err := time.Parse(time.RFC3339, receivedBeforeStr)
+		receivedBefore, err := time.Parse(timeLayout, receivedBeforeStr)
 		if err == nil {
 			request.ReceivedBefore = &receivedBefore
 		}
 	}
 	if receivedAfterStr := c.Query("received_after"); receivedAfterStr != "" {
-		receivedAfter, err := time.Parse(time.RFC3339, receivedAfterStr)
+		receivedAfter, err := time.Parse(timeLayout, receivedAfterStr)
 		if err == nil {
 			request.ReceivedAfter = &receivedAfter
 		}
