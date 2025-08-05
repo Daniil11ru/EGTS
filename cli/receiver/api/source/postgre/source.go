@@ -23,6 +23,10 @@ func (s *Source) GetVehicles(request request.GetVehicles) ([]model.Vehicle, erro
 		q = q.Where("provider_id = ?", *request.ProviderID)
 	}
 
+	if request.ModerationStatus != nil {
+		q = q.Where("moderation_status = ?", *request.ModerationStatus)
+	}
+
 	if err := q.Scan(&vehicles).Error; err != nil {
 		return nil, err
 	}

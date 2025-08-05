@@ -8,6 +8,7 @@ import (
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/request"
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/response"
 	"github.com/daniil11ru/egts/cli/receiver/api/repository"
+	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,6 +29,11 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 			providerId32 := int32(providerId)
 			request.ProviderID = &providerId32
 		}
+	}
+
+	if moderationStatusStr := c.Query("moderation_status"); moderationStatusStr != "" {
+		moderationStatus := types.ModerationStatus(moderationStatusStr)
+		request.ModerationStatus = &moderationStatus
 	}
 
 	vehicles, err := h.Repository.GetVehicles(request)
