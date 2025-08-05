@@ -136,6 +136,7 @@ func runServer(config config.Config) {
 	c := cron.New()
 	c.AddFunc(config.OptimizeGeometryCronExpression, func() { optimizeGeometry.Run() })
 	c.Start()
+	log.Info("Запланирована ежедневная оптимизация геометрии треков")
 
 	server := server.NewServer(config.GetListenAddress(), config.GetEmptyConnectionTTL(), &savePacket, getIpWhiteList)
 	err := server.Run()

@@ -6,7 +6,7 @@ log_file_path: "logs/app.log"
 log_max_age_days: 366
 save_telematics_data_month_start: 5
 save_telematics_data_month_end: 9
-optimize_geometry_cron_expression: "0 2 * * *"
+optimize_geometry_cron_expression: "0 0 2 * * *"
 migrations_path: "file://cli/receiver/migrations"
 
 storage:
