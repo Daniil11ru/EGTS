@@ -8,6 +8,7 @@ import (
 	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	"github.com/daniil11ru/egts/cli/receiver/util"
+	"github.com/sirupsen/logrus"
 )
 
 type LineMovement struct {
@@ -33,11 +34,14 @@ type OptimizeGeometry struct {
 }
 
 func (s *OptimizeGeometry) Run() error {
+	logrus.Info("Запуск запланированной задачи оптимизации транспортных треков")
+
 	tracks, err := s.PrimaryRepository.GetTracks2DOfAllVehicles(time.Now().Add(-24*time.Hour), time.Now())
 	if err != nil {
 		return fmt.Errorf("не удалось получить треки: %w", err)
 	}
 
+	count := 0
 	for _, track := range tracks {
 		simplifiedTrack := GetSimplifiedTrack(track.Movements, 0.0001)
 
@@ -52,10 +56,13 @@ func (s *OptimizeGeometry) Run() error {
 			}
 
 			if !exists {
+				count++
 				s.PrimaryRepository.DeleteVehicleMovement(movement.ID)
 			}
 		}
 	}
+
+	logrus.Info("Оптимизация транспортных треков завершена, удалено точек: ", count)
 
 	return nil
 }
