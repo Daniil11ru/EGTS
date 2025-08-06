@@ -47,7 +47,7 @@ func main() {
 
 	go runServer(config)
 
-	go runApi(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Host, config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]), 7001)
+	// go runApi(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Host, config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]), 7001)
 
 	select {}
 }
@@ -168,11 +168,11 @@ func runApi(dsn string, port int16) {
 		log.Fatalf("Не удалось создать контроллер API: %v", err)
 		return
 	}
+	log.Infof("Запуск API на порту %d", port)
 	err = controller.Run(port)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Infof("API запущено на порту %d", port)
 }
 
 func applyMigrations(config config.Config) error {
