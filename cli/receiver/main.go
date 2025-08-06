@@ -148,10 +148,14 @@ func runServer(config config.Config) {
 }
 
 func runApi(dsn string, port int16) {
-	db, _ := gorm.Open(postgres.New(postgres.Config{
+	db, err := gorm.Open(postgres.New(postgres.Config{
 		DSN:                  dsn,
 		PreferSimpleProtocol: true,
 	}), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Не удалось подключиться к базе данных: %v", err)
+		return
+	}
 	source := apisrc.New(db)
 	businessDataRepository := apirepo.NewBusinessDataSimple(source)
 	handler := api.NewHandler(businessDataRepository)
