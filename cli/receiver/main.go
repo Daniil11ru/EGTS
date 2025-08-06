@@ -47,7 +47,7 @@ func main() {
 
 	go runServer(config)
 
-	// go runApi(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Host, config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]), 7001)
+	go runApi(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Store["host"], config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]), 7001)
 
 	select {}
 }
