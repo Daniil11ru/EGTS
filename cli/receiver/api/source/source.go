@@ -1,4 +1,4 @@
-package postgre
+package source
 
 import (
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/request"
@@ -6,15 +6,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type Source struct {
+type Postgre struct {
 	db *gorm.DB
 }
 
-func New(db *gorm.DB) *Source {
-	return &Source{db: db}
+func New(db *gorm.DB) *Postgre {
+	return &Postgre{db: db}
 }
 
-func (s *Source) GetVehicles(request request.GetVehicles) ([]model.Vehicle, error) {
+func (s *Postgre) GetVehicles(request request.GetVehicles) ([]model.Vehicle, error) {
 	var vehicles []model.Vehicle
 
 	q := s.db.Table("vehicle").Select("id, imei, oid, name, provider_id, moderation_status")
@@ -34,7 +34,7 @@ func (s *Source) GetVehicles(request request.GetVehicles) ([]model.Vehicle, erro
 	return vehicles, nil
 }
 
-func (s *Source) GetLocations(request request.GetLocations) ([]model.Location, error) {
+func (s *Postgre) GetLocations(request request.GetLocations) ([]model.Location, error) {
 	var locations []model.Location
 
 	q := s.db.Table("vehicle_movement").Select("vehicle_id, latitude, longitude, sent_at, received_at")
@@ -62,7 +62,7 @@ func (s *Source) GetLocations(request request.GetLocations) ([]model.Location, e
 	return locations, nil
 }
 
-func (s *Source) GetLatestLocations(request request.GetLatestLocations) ([]model.LatestLocation, error) {
+func (s *Postgre) GetLatestLocations(request request.GetLatestLocations) ([]model.LatestLocation, error) {
 	var latestLocations []model.LatestLocation
 
 	q := s.db.Table("vehicle_movement").Select("vehicle_id, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at")
@@ -76,4 +76,14 @@ func (s *Source) GetLatestLocations(request request.GetLatestLocations) ([]model
 	}
 
 	return latestLocations, nil
+}
+
+func (s *Postgre) GetApiKeys() ([]model.ApiKey, error) {
+	var apiKeys []model.ApiKey
+
+	if err := s.db.Table("api_key").Select("id, name, hash").Scan(&apiKeys).Error; err != nil {
+		return nil, err
+	}
+
+	return apiKeys, nil
 }

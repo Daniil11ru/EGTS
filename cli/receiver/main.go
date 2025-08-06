@@ -7,14 +7,15 @@ import (
 	"path/filepath"
 
 	"github.com/daniil11ru/egts/cli/receiver/api"
-	"github.com/daniil11ru/egts/cli/receiver/api/repository/implementation"
-	"github.com/daniil11ru/egts/cli/receiver/api/source/postgre"
+	apidomain "github.com/daniil11ru/egts/cli/receiver/api/domain"
+	apirepo "github.com/daniil11ru/egts/cli/receiver/api/repository"
+	apisrc "github.com/daniil11ru/egts/cli/receiver/api/source"
 	"github.com/daniil11ru/egts/cli/receiver/config"
 	connector "github.com/daniil11ru/egts/cli/receiver/connector/implementation"
 	"github.com/daniil11ru/egts/cli/receiver/domain"
-	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
+	repo "github.com/daniil11ru/egts/cli/receiver/repository/primary"
 	"github.com/daniil11ru/egts/cli/receiver/server"
-	source "github.com/daniil11ru/egts/cli/receiver/source/primary/pg"
+	src "github.com/daniil11ru/egts/cli/receiver/source/primary/pg"
 	"github.com/daniil11ru/egts/cli/receiver/util"
 	"github.com/robfig/cron"
 	"gorm.io/gorm"
@@ -112,10 +113,10 @@ func runServer(config config.Config) {
 		return
 	}
 
-	primarySource := source.PrimarySource{}
+	primarySource := src.PrimarySource{}
 	primarySource.Initialize(&connector)
 
-	primaryRepository := repository.PrimaryRepository{Source: &primarySource}
+	primaryRepository := repo.PrimaryRepository{Source: &primarySource}
 
 	savePacket := domain.SavePacket{
 		PrimaryRepository:            primaryRepository,
@@ -151,14 +152,23 @@ func runApi(dsn string, port int16) {
 		DSN:                  dsn,
 		PreferSimpleProtocol: true,
 	}), &gorm.Config{})
-	source := postgre.New(db)
-	repository := implementation.New(source)
-	handler := api.NewHandler(repository)
-	controller := api.NewController(handler)
-	err := controller.Run(port)
+	source := apisrc.New(db)
+	businessDataRepository := apirepo.NewBusinessDataSimple(source)
+	handler := api.NewHandler(businessDataRepository)
+	additionalDataRepository := apirepo.NewAdditionalDataSimple(source)
+	getApiKeys := apidomain.GetApiKeys{
+		ApiKeysRepository: additionalDataRepository,
+	}
+	controller, err := api.NewController(handler, &getApiKeys)
+	if err != nil {
+		log.Fatalf("Не удалось создать контроллер API: %v", err)
+		return
+	}
+	err = controller.Run(port)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Infof("API запущено на порту %d", port)
 }
 
 func applyMigrations(config config.Config) error {

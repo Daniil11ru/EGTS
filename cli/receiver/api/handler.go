@@ -13,10 +13,10 @@ import (
 )
 
 type Handler struct {
-	Repository repository.Repository
+	Repository repository.BusinessData
 }
 
-func NewHandler(repository repository.Repository) *Handler {
+func NewHandler(repository repository.BusinessData) *Handler {
 	return &Handler{Repository: repository}
 }
 
