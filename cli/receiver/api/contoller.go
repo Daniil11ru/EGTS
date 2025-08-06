@@ -35,7 +35,7 @@ func NewController(handler *Handler, getApiKeys *domain.GetApiKeys) (*Controller
 	router := gin.Default()
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost"},
+		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET"},
 		AllowHeaders:     []string{"Origin"},
 		AllowCredentials: false,
@@ -57,6 +57,7 @@ func NewController(handler *Handler, getApiKeys *domain.GetApiKeys) (*Controller
 
 			if subtle.ConstantTimeCompare(computedReceivedApiKeyHash, apiKeyHash) == 1 {
 				c.Next()
+				return
 			}
 		}
 
