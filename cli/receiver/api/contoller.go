@@ -64,12 +64,14 @@ func NewController(handler *Handler, getApiKeys *domain.GetApiKeys) (*Controller
 		c.AbortWithStatus(http.StatusUnauthorized)
 	})
 
-	vehicles := router.Group("/vehicles")
+	api := router.Group("/api/v1")
+
+	vehicles := api.Group("/vehicles")
 	{
 		vehicles.GET("/", handler.GetVehicles)
 	}
 
-	locations := router.Group("/locations")
+	locations := api.Group("/locations")
 	{
 		locations.GET("/", handler.GetLocations)
 		locations.GET("/latest", handler.GetLatestLocations)
