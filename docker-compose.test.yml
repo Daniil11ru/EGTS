@@ -4,7 +4,8 @@ services:
     env_file:
       - .env
     ports:
-      - "$APP_PORT:$APP_PORT"
+      - "$EGTS_SERVER_PORT:$EGTS_SERVER_PORT"
+      - "$API_PORT:$API_PORT"
     volumes:
       - app-logs:/logs
       - /etc/localtime:/etc/localtime:ro
