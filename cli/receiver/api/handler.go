@@ -54,6 +54,7 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 			ModerationStatus: item.ModerationStatus,
 		}
 	})
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -136,6 +137,9 @@ func (h *Handler) GetLatestLocations(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+	if len(locations) == 0 {
+		locations = make([]response.LatestLocation, 0)
 	}
 
 	c.JSON(http.StatusOK, locations)
