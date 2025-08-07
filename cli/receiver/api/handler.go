@@ -7,8 +7,10 @@ import (
 
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/request"
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/response"
+	"github.com/daniil11ru/egts/cli/receiver/api/model"
 	"github.com/daniil11ru/egts/cli/receiver/api/repository"
 	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
+	"github.com/daniil11ru/egts/cli/receiver/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -42,7 +44,17 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, vehicles)
+	response := util.Map(vehicles, func(item model.Vehicle) response.Vehicle {
+		return response.Vehicle{
+			ID:               item.ID,
+			IMEI:             strconv.FormatInt(item.IMEI, 10),
+			OID:              item.OID,
+			Name:             item.Name,
+			ProviderID:       item.ProviderID,
+			ModerationStatus: item.ModerationStatus,
+		}
+	})
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *Handler) GetLocations(c *gin.Context) {
