@@ -91,3 +91,17 @@ func (s *Postgre) GetApiKeys() ([]model.ApiKey, error) {
 
 	return apiKeys, nil
 }
+
+func (s *Postgre) UpdateVehicle(request request.UpdateVehicle) error {
+	updates := map[string]interface{}{}
+	if request.Name != nil {
+		updates["name"] = *request.Name
+	}
+	if request.ModerationStatus != nil {
+		updates["moderation_status"] = *request.ModerationStatus
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return s.db.Table("vehicle").Where("imei = ?", request.IMEI).Updates(updates).Error
+}

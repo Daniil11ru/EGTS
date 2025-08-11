@@ -151,3 +151,20 @@ func (h *Handler) GetLatestLocations(c *gin.Context) {
 
 	c.JSON(http.StatusOK, locations)
 }
+
+func (h *Handler) UpdateVehicle(c *gin.Context) {
+	var req request.UpdateVehicle
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Name == nil && req.ModerationStatus == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no fields to update"})
+		return
+	}
+	if err := h.Repository.UpdateVehicle(req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
+}

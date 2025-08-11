@@ -10,6 +10,7 @@ type BusinessData interface {
 	GetVehicles(request request.GetVehicles) ([]model.Vehicle, error)
 	GetLocations(request request.GetLocations) ([]model.Location, error)
 	GetLatestLocations(request request.GetLatestLocations) ([]model.LatestLocation, error)
+	UpdateVehicle(request request.UpdateVehicle) error
 }
 
 type BusinessDataSimple struct {
@@ -30,4 +31,8 @@ func (r *BusinessDataSimple) GetLocations(request request.GetLocations) ([]model
 
 func (r *BusinessDataSimple) GetLatestLocations(request request.GetLatestLocations) ([]model.LatestLocation, error) {
 	return r.PostgreSource.GetLatestLocations(request)
+}
+
+func (r *BusinessDataSimple) UpdateVehicle(request request.UpdateVehicle) error {
+	return r.PostgreSource.UpdateVehicle(request)
 }
