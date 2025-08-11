@@ -15,9 +15,9 @@ require (
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
-        github.com/stretchr/testify v1.10.0
-        github.com/xuri/excelize/v2 v2.9.1
-        github.com/tarantool/go-tarantool v0.0.0-20190330192518-aaa93c4bdc35
+	github.com/stretchr/testify v1.10.0
+	github.com/tarantool/go-tarantool v0.0.0-20190330192518-aaa93c4bdc35
+	github.com/xuri/excelize/v2 v2.9.1
 	google.golang.org/appengine v1.6.8
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1
