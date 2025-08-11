@@ -27,6 +27,10 @@ func (s *Postgre) GetVehicles(request request.GetVehicles) ([]model.Vehicle, err
 		q = q.Where("moderation_status = ?", *request.ModerationStatus)
 	}
 
+	if request.IMEI != nil {
+		q = q.Where("imei = ?", *request.IMEI)
+	}
+
 	if err := q.Scan(&vehicles).Error; err != nil {
 		return nil, err
 	}

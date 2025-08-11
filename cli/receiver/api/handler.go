@@ -38,6 +38,13 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 		request.ModerationStatus = &moderationStatus
 	}
 
+	if imeiStr := c.Query("imei"); imeiStr != "" {
+		imei, err := strconv.ParseInt(imeiStr, 10, 64)
+		if err == nil {
+			request.IMEI = &imei
+		}
+	}
+
 	vehicles, err := h.Repository.GetVehicles(request)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

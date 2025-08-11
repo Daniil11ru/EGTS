@@ -7,4 +7,5 @@ import (
 type GetVehicles struct {
 	ProviderID       *int32
 	ModerationStatus *types.ModerationStatus
+	IMEI             *int64
 }
