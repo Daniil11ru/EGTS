@@ -15,8 +15,9 @@ require (
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
-	github.com/stretchr/testify v1.10.0
-	github.com/tarantool/go-tarantool v0.0.0-20190330192518-aaa93c4bdc35
+        github.com/stretchr/testify v1.10.0
+        github.com/xuri/excelize/v2 v2.9.1
+        github.com/tarantool/go-tarantool v0.0.0-20190330192518-aaa93c4bdc35
 	google.golang.org/appengine v1.6.8
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1
@@ -30,8 +31,13 @@ require (
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/richardlehane/mscfb v1.0.4 // indirect
+	github.com/richardlehane/msoleps v1.0.4 // indirect
+	github.com/tiendc/go-deepcopy v1.6.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
+	github.com/xuri/efp v0.0.1 // indirect
+	github.com/xuri/nfp v0.0.1 // indirect
 	golang.org/x/arch v0.18.0 // indirect
 )
 
@@ -474,7 +480,7 @@ require (
 	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
-	golang.org/x/image v0.0.0-20220302094943-723b81ca9867 // indirect
+	golang.org/x/image v0.25.0 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 // indirect
 	golang.org/x/mod v0.25.0 // indirect
