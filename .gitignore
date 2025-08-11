@@ -30,3 +30,4 @@ receiver/debug
 .DS_Store
 
 logs/
+tmp/

@@ -69,7 +69,8 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 }
 
 func (h *Handler) GetVehiclesExcel(c *gin.Context) {
-	request := request.GetVehicles{}
+	generalRequest := request.GetVehicles{}
+	request := request.GetVehiclesExcel{}
 
 	if providerIdStr := c.Query("provider_id"); providerIdStr != "" {
 		if providerId, err := strconv.Atoi(providerIdStr); err == nil {
@@ -83,13 +84,10 @@ func (h *Handler) GetVehiclesExcel(c *gin.Context) {
 		request.ModerationStatus = &moderationStatus
 	}
 
-	if imeiStr := c.Query("imei"); imeiStr != "" {
-		if imei, err := strconv.ParseInt(imeiStr, 10, 64); err == nil {
-			request.IMEI = &imei
-		}
-	}
+	generalRequest.ProviderID = request.ProviderID
+	generalRequest.ModerationStatus = request.ModerationStatus
 
-	vehicles, err := h.Repository.GetVehicles(request)
+	vehicles, err := h.Repository.GetVehicles(generalRequest)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
