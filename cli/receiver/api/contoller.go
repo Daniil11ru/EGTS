@@ -69,7 +69,7 @@ func NewController(handler *Handler, getApiKeys *domain.GetApiKeys) (*Controller
 	vehicles := api.Group("/vehicles")
 	{
 		vehicles.GET("/", handler.GetVehicles)
-		vehicles.PUT("/", handler.UpdateVehicle)
+		vehicles.PATCH("/", handler.UpdateVehicle)
 	}
 
 	locations := api.Group("/locations")
