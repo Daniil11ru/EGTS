@@ -76,7 +76,6 @@ func NewController(handler *Handler, getApiKeys *domain.GetApiKeys) (*Controller
 	locations := api.Group("/locations")
 	{
 		locations.GET("/", handler.GetLocations)
-		locations.GET("/latest", handler.GetLatestLocations)
 	}
 
 	return &Controller{Handler: handler, Router: router, GetApiKeys: getApiKeys, ApiKeyHashes: apiKeyHashes}, nil

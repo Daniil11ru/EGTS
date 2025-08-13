@@ -151,6 +151,15 @@ func (h *Handler) GetLocations(c *gin.Context) {
 
 	const timeLayout = "02.01.2006 15:04:05"
 
+	if locationsLimitStr := c.Query("locations_limit"); locationsLimitStr != "" {
+		locationsLimit, err := strconv.Atoi(locationsLimitStr)
+		if err == nil {
+			request.LocationsLimit = int64(locationsLimit)
+		}
+	} else {
+		request.LocationsLimit = 10
+	}
+
 	if vehicleIdStr := c.Query("vehicle_id"); vehicleIdStr != "" {
 		vehicleId, err := strconv.Atoi(vehicleIdStr)
 		if err == nil {
@@ -198,7 +207,7 @@ func (h *Handler) GetLocations(c *gin.Context) {
 				Locations: []response.Location{},
 			}
 		}
-		track.Locations = append(track.Locations, response.Location{Latitude: loc.Latitude, Longitude: loc.Longitude, SentAt: loc.SentAt, ReceivedAt: loc.ReceivedAt})
+		track.Locations = append(track.Locations, response.Location{Latitude: loc.Latitude, Longitude: loc.Longitude, SentAt: loc.SentAt.Format(timeLayout), ReceivedAt: loc.ReceivedAt.Format(timeLayout)})
 		tracks[loc.VehicleId] = track
 	}
 
@@ -208,29 +217,6 @@ func (h *Handler) GetLocations(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, vehicleTracks)
-}
-
-func (h *Handler) GetLatestLocations(c *gin.Context) {
-	request := request.GetLatestLocations{}
-
-	if vehicleIdStr := c.Query("vehicle_id"); vehicleIdStr != "" {
-		vehicleId, err := strconv.Atoi(vehicleIdStr)
-		if err == nil {
-			vehicleId32 := int32(vehicleId)
-			request.VehicleID = &vehicleId32
-		}
-	}
-
-	locations, err := h.Repository.GetLatestLocations(request)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	if len(locations) == 0 {
-		locations = make([]response.LatestLocation, 0)
-	}
-
-	c.JSON(http.StatusOK, locations)
 }
 
 func (h *Handler) UpdateVehicle(c *gin.Context) {

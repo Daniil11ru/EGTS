@@ -8,4 +8,5 @@ type GetLocations struct {
 	SentAfter      *time.Time
 	ReceivedBefore *time.Time
 	ReceivedAfter  *time.Time
+	LocationsLimit int64
 }

@@ -41,45 +41,43 @@ func (s *Postgre) GetVehicles(request request.GetVehicles) ([]model.Vehicle, err
 func (s *Postgre) GetLocations(request request.GetLocations) ([]model.Location, error) {
 	var locations []model.Location
 
-	q := s.db.Table("vehicle_movement").Select("vehicle_id, latitude, longitude, sent_at, received_at")
+	sub := s.db.Table("vehicle_movement").Select(`
+		vehicle_id,
+		latitude,
+		longitude,
+		altitude,
+		direction,
+		speed,
+		satellite_count,
+		sent_at,
+		received_at,
+		ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY sent_at DESC) AS rn`)
 
 	if request.VehicleID != nil {
-		q = q.Where("vehicle_id = ?", *request.VehicleID)
+		sub = sub.Where("vehicle_id = ?", *request.VehicleID)
 	}
 	if request.SentBefore != nil {
-		q = q.Where("sent_at < ?", *request.SentBefore)
+		sub = sub.Where("sent_at < ?", *request.SentBefore)
 	}
 	if request.SentAfter != nil {
-		q = q.Where("sent_at > ?", *request.SentAfter)
+		sub = sub.Where("sent_at > ?", *request.SentAfter)
 	}
 	if request.ReceivedBefore != nil {
-		q = q.Where("received_at < ?", *request.ReceivedBefore)
+		sub = sub.Where("received_at < ?", *request.ReceivedBefore)
 	}
 	if request.ReceivedAfter != nil {
-		q = q.Where("received_at > ?", *request.ReceivedAfter)
+		sub = sub.Where("received_at > ?", *request.ReceivedAfter)
 	}
+
+	q := s.db.Table("(?) AS ranked", sub).
+		Where("rn <= ?", request.LocationsLimit).
+		Select("vehicle_id, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at").
+		Order("vehicle_id, sent_at DESC")
 
 	if err := q.Scan(&locations).Error; err != nil {
 		return nil, err
 	}
-
 	return locations, nil
-}
-
-func (s *Postgre) GetLatestLocations(request request.GetLatestLocations) ([]model.LatestLocation, error) {
-	var latestLocations []model.LatestLocation
-
-	q := s.db.Table("vehicle_movement").Select("vehicle_id, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at")
-
-	if request.VehicleID != nil {
-		q = q.Where("vehicle_id = ?", *request.VehicleID)
-	}
-
-	if err := q.Scan(&latestLocations).Error; err != nil {
-		return nil, err
-	}
-
-	return latestLocations, nil
 }
 
 func (s *Postgre) GetApiKeys() ([]model.ApiKey, error) {

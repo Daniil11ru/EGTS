@@ -9,7 +9,6 @@ import (
 type BusinessData interface {
 	GetVehicles(request request.GetVehicles) ([]model.Vehicle, error)
 	GetLocations(request request.GetLocations) ([]model.Location, error)
-	GetLatestLocations(request request.GetLatestLocations) ([]model.LatestLocation, error)
 	UpdateVehicle(request request.UpdateVehicle) error
 }
 
@@ -27,10 +26,6 @@ func (r *BusinessDataSimple) GetVehicles(request request.GetVehicles) ([]model.V
 
 func (r *BusinessDataSimple) GetLocations(request request.GetLocations) ([]model.Location, error) {
 	return r.PostgreSource.GetLocations(request)
-}
-
-func (r *BusinessDataSimple) GetLatestLocations(request request.GetLatestLocations) ([]model.LatestLocation, error) {
-	return r.PostgreSource.GetLatestLocations(request)
 }
 
 func (r *BusinessDataSimple) UpdateVehicle(request request.UpdateVehicle) error {
