@@ -1,57 +1,6 @@
 package types
 
-import (
-	"database/sql"
-	"database/sql/driver"
-	"fmt"
-	"math"
-)
-
-type ModerationStatus string
-
-const (
-	ModerationStatusPending  ModerationStatus = "pending"
-	ModerationStatusApproved ModerationStatus = "approved"
-	ModerationStatusRejected ModerationStatus = "rejected"
-)
-
-func (ms *ModerationStatus) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return fmt.Errorf("невозможно извлечь ModerationStatus из %T", value)
-	}
-	*ms = ModerationStatus(string(b))
-	return nil
-}
-
-func (ms ModerationStatus) Value() (driver.Value, error) {
-	return string(ms), nil
-}
-
-type Track2D struct {
-	VehicleID int32
-	Movements []Movement2D
-}
-
-type Vehicle struct {
-	ID               int32
-	IMEI             int64
-	OID              sql.NullInt64
-	Name             sql.NullString
-	ProviderID       int32
-	ModerationStatus ModerationStatus
-}
-
-type Provider struct {
-	ID   int32
-	Name string
-	IP   string
-}
-
-type Movement2D struct {
-	Position2D
-	ID int32
-}
+import "math"
 
 type Position2D struct {
 	Latitude  float64

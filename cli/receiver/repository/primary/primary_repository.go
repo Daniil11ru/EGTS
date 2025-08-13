@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	"github.com/daniil11ru/egts/cli/receiver/repository/util"
 	"github.com/daniil11ru/egts/cli/receiver/source/primary"
+	"github.com/daniil11ru/egts/cli/receiver/types"
 )
 
 type PrimaryRepository struct {

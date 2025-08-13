@@ -1,6 +1,8 @@
 package source
 
 import (
+	"fmt"
+
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/request"
 	"github.com/daniil11ru/egts/cli/receiver/api/model"
 	"gorm.io/gorm"
@@ -36,6 +38,18 @@ func (s *Postgre) GetVehicles(request request.GetVehicles) ([]model.Vehicle, err
 	}
 
 	return vehicles, nil
+}
+
+func (s *Postgre) GetVehicle(vehicleId int32) (model.Vehicle, error) {
+	var vehicle model.Vehicle
+
+	q := s.db.Table("vehicle").Select("id, imei, oid, name, provider_id, moderation_status").Where("id = ?", vehicleId)
+
+	if err := q.Scan(&vehicle).Error; err != nil {
+		return model.Vehicle{}, err
+	}
+
+	return vehicle, nil
 }
 
 func (s *Postgre) GetLocations(request request.GetLocations) ([]model.Location, error) {
@@ -90,7 +104,7 @@ func (s *Postgre) GetApiKeys() ([]model.ApiKey, error) {
 	return apiKeys, nil
 }
 
-func (s *Postgre) UpdateVehicle(request request.UpdateVehicle) error {
+func (s *Postgre) UpdateVehicleByImei(request request.UpdateVehicle) error {
 	updates := map[string]interface{}{}
 	if request.Name != nil {
 		updates["name"] = *request.Name
@@ -101,5 +115,46 @@ func (s *Postgre) UpdateVehicle(request request.UpdateVehicle) error {
 	if len(updates) == 0 {
 		return nil
 	}
-	return s.db.Table("vehicle").Where("imei = ?", request.IMEI).Updates(updates).Error
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var ids []int32
+		if err := tx.Table("vehicle").
+			Select("id").
+			Where("imei = ?", request.IMEI).
+			Limit(2).
+			Find(&ids).Error; err != nil {
+			return err
+		}
+		if len(ids) == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		if len(ids) > 1 {
+			return fmt.Errorf("по заданному IMEI найдено более одной транспортной единицы")
+		}
+		res := tx.Table("vehicle").Where("id = ?", ids[0]).Updates(updates)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected != 1 {
+			return fmt.Errorf("обновление не удалось")
+		}
+		return nil
+	})
+}
+
+func (s *Postgre) UpdateVehicleById(vehicleId int32, request request.UpdateVehicle) error {
+	updates := map[string]interface{}{}
+	if request.Name != nil {
+		updates["name"] = *request.Name
+	}
+	if request.ModerationStatus != nil {
+		updates["moderation_status"] = *request.ModerationStatus
+	}
+	if request.IMEI != nil {
+		updates["imei"] = *request.IMEI
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return s.db.Table("vehicle").Where("id = ?", vehicleId).Updates(updates).Error
 }

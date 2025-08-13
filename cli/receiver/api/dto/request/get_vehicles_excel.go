@@ -1,7 +1,7 @@
 package request
 
 import (
-	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
+	"github.com/daniil11ru/egts/cli/receiver/types"
 )
 
 type GetVehiclesExcel struct {

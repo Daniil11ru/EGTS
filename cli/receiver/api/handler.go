@@ -11,7 +11,7 @@ import (
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/response"
 	"github.com/daniil11ru/egts/cli/receiver/api/model"
 	"github.com/daniil11ru/egts/cli/receiver/api/repository"
-	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
+	"github.com/daniil11ru/egts/cli/receiver/types"
 	"github.com/daniil11ru/egts/cli/receiver/util"
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
@@ -26,29 +26,26 @@ func NewHandler(repository repository.BusinessData) *Handler {
 }
 
 func (h *Handler) GetVehicles(c *gin.Context) {
-	request := request.GetVehicles{}
+	req := request.GetVehicles{}
 
 	if providerIdStr := c.Query("provider_id"); providerIdStr != "" {
 		providerId, err := strconv.Atoi(providerIdStr)
 		if err == nil {
 			providerId32 := int32(providerId)
-			request.ProviderID = &providerId32
+			req.ProviderID = &providerId32
 		}
 	}
 
 	if moderationStatusStr := c.Query("moderation_status"); moderationStatusStr != "" {
 		moderationStatus := types.ModerationStatus(moderationStatusStr)
-		request.ModerationStatus = &moderationStatus
+		req.ModerationStatus = &moderationStatus
 	}
 
-	if imeiStr := c.Query("imei"); imeiStr != "" {
-		imei, err := strconv.ParseInt(imeiStr, 10, 64)
-		if err == nil {
-			request.IMEI = &imei
-		}
+	if imei := c.Query("imei"); imei != "" {
+		req.IMEI = &imei
 	}
 
-	vehicles, err := h.Repository.GetVehicles(request)
+	vehicles, err := h.Repository.GetVehicles(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -68,26 +65,48 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func (h *Handler) GetVehicle(c *gin.Context) {
+	vehicleIdStr := c.Param("id")
+	vehicleId, err := strconv.ParseInt(vehicleIdStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный ID транспорта"})
+	}
+
+	vehicle, err := h.Repository.GetVehicle(int32(vehicleId))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+
+	response := response.Vehicle{
+		ID:               vehicle.ID,
+		IMEI:             strconv.FormatInt(vehicle.IMEI, 10),
+		OID:              vehicle.OID,
+		Name:             vehicle.Name,
+		ProviderID:       vehicle.ProviderID,
+		ModerationStatus: vehicle.ModerationStatus,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 func (h *Handler) GetVehiclesExcel(c *gin.Context) {
-	generalRequest := request.GetVehicles{}
-	request := request.GetVehiclesExcel{}
+	req := request.GetVehiclesExcel{}
 
 	if providerIdStr := c.Query("provider_id"); providerIdStr != "" {
 		if providerId, err := strconv.Atoi(providerIdStr); err == nil {
 			providerId32 := int32(providerId)
-			request.ProviderID = &providerId32
+			req.ProviderID = &providerId32
 		}
 	}
 
 	if moderationStatusStr := c.Query("moderation_status"); moderationStatusStr != "" {
 		moderationStatus := types.ModerationStatus(moderationStatusStr)
-		request.ModerationStatus = &moderationStatus
+		req.ModerationStatus = &moderationStatus
 	}
 
-	generalRequest.ProviderID = request.ProviderID
-	generalRequest.ModerationStatus = request.ModerationStatus
+	generalReq := request.GetVehicles{ProviderID: req.ProviderID, ModerationStatus: req.ModerationStatus}
 
-	vehicles, err := h.Repository.GetVehicles(generalRequest)
+	vehicles, err := h.Repository.GetVehicles(generalReq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -219,17 +238,46 @@ func (h *Handler) GetLocations(c *gin.Context) {
 	c.JSON(http.StatusOK, vehicleTracks)
 }
 
-func (h *Handler) UpdateVehicle(c *gin.Context) {
+func (h *Handler) UpdateVehicleByImei(c *gin.Context) {
 	var req request.UpdateVehicle
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if req.Name == nil && req.ModerationStatus == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no fields to update"})
+	if req.IMEI == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "IMEI обязателен для указания"})
 		return
 	}
-	if err := h.Repository.UpdateVehicle(req); err != nil {
+	if req.Name == nil && req.ModerationStatus == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Нечего обновлять"})
+		return
+	}
+	if err := h.Repository.UpdateVehicleByImei(req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+func (h *Handler) UpdateVehicleById(c *gin.Context) {
+	var req request.UpdateVehicle
+
+	vehicleIdStr := c.Param("id")
+	vehicleId, err := strconv.ParseInt(vehicleIdStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный ID транспорта"})
+		return
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.IMEI == nil && req.Name == nil && req.ModerationStatus == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Нечего обновлять"})
+		return
+	}
+	if err := h.Repository.UpdateVehicleById(int32(vehicleId), req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

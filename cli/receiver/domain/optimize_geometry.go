@@ -6,7 +6,7 @@ import (
 	"time"
 
 	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
-	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
+	"github.com/daniil11ru/egts/cli/receiver/types"
 	"github.com/daniil11ru/egts/cli/receiver/util"
 	"github.com/sirupsen/logrus"
 )

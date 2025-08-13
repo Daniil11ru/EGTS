@@ -7,8 +7,8 @@ import (
 	"time"
 
 	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
-	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	util "github.com/daniil11ru/egts/cli/receiver/repository/util"
+	types "github.com/daniil11ru/egts/cli/receiver/types"
 	cron "github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 )

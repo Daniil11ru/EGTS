@@ -7,8 +7,8 @@ import (
 	"time"
 
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
-	"github.com/daniil11ru/egts/cli/receiver/repository/primary/types"
 	"github.com/daniil11ru/egts/cli/receiver/repository/util"
+	"github.com/daniil11ru/egts/cli/receiver/types"
 )
 
 type PrimarySource struct {
