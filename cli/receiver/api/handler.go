@@ -33,13 +33,24 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 	if providerIdStr := c.Query("provider_id"); providerIdStr != "" {
 		providerId, err := strconv.Atoi(providerIdStr)
 		if err == nil {
+			if providerId < 0 || providerId > 2147483647 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "provider_id должен быть в пределах от 0 до 2147483647"})
+				return
+			}
 			providerId32 := int32(providerId)
 			getVehiclesFilter.ProviderID = &providerId32
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный provider_id"})
+			return
 		}
 	}
 
 	if moderationStatusStr := c.Query("moderation_status"); moderationStatusStr != "" {
 		moderationStatus := types.ModerationStatus(moderationStatusStr)
+		if !moderationStatus.IsValid() {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный moderation_status"})
+			return
+		}
 		getVehiclesFilter.ModerationStatus = &moderationStatus
 	}
 
@@ -72,6 +83,7 @@ func (h *Handler) GetVehicle(c *gin.Context) {
 	vehicleId, err := strconv.ParseInt(vehicleIdStr, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный ID транспорта"})
+		return
 	}
 
 	vehicle, err := h.Repository.GetVehicle(int32(vehicleId))
@@ -98,6 +110,10 @@ func (h *Handler) GetVehiclesExcel(c *gin.Context) {
 		v, err := strconv.ParseInt(s, 10, 32)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "некоррректный provider_id"})
+			return
+		}
+		if v < 0 || v > 2147483647 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "provider_id должен быть в пределах от 0 до 2147483647"})
 			return
 		}
 		id := int32(v)
@@ -180,7 +196,14 @@ func (h *Handler) GetLocations(c *gin.Context) {
 	if locationsLimitStr := c.Query("locations_limit"); locationsLimitStr != "" {
 		locationsLimit, err := strconv.Atoi(locationsLimitStr)
 		if err == nil {
+			if locationsLimit < 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "locations_limit должен быть в пределах от 1 до 9223372036854775807"})
+				return
+			}
 			getLocationsFilter.LocationsLimit = int64(locationsLimit)
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный locations_limit"})
+			return
 		}
 	} else {
 		getLocationsFilter.LocationsLimit = 10
@@ -189,32 +212,51 @@ func (h *Handler) GetLocations(c *gin.Context) {
 	if vehicleIdStr := c.Query("vehicle_id"); vehicleIdStr != "" {
 		vehicleId, err := strconv.Atoi(vehicleIdStr)
 		if err == nil {
+			if vehicleId < 0 || vehicleId > 2147483647 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "vehicle_id должен быть в пределах от 0 до 2147483647"})
+				return
+			}
 			vehicleId32 := int32(vehicleId)
 			getLocationsFilter.VehicleID = &vehicleId32
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный vehicle_id"})
+			return
 		}
 	}
 	if sentBeforeStr := c.Query("sent_before"); sentBeforeStr != "" {
 		sentBefore, err := time.Parse(timeLayout, sentBeforeStr)
 		if err == nil {
 			getLocationsFilter.SentBefore = &sentBefore
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Дата должна быть в формате DD.MM.YYYY HH:MM:SS"})
+			return
 		}
 	}
 	if sentAfterStr := c.Query("sent_after"); sentAfterStr != "" {
 		sentAfter, err := time.Parse(timeLayout, sentAfterStr)
 		if err == nil {
 			getLocationsFilter.SentAfter = &sentAfter
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Дата должна быть в формате DD.MM.YYYY HH:MM:SS"})
+			return
 		}
 	}
 	if receivedBeforeStr := c.Query("received_before"); receivedBeforeStr != "" {
 		receivedBefore, err := time.Parse(timeLayout, receivedBeforeStr)
 		if err == nil {
 			getLocationsFilter.ReceivedBefore = &receivedBefore
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Дата должна быть в формате DD.MM.YYYY HH:MM:SS"})
+			return
 		}
 	}
 	if receivedAfterStr := c.Query("received_after"); receivedAfterStr != "" {
 		receivedAfter, err := time.Parse(timeLayout, receivedAfterStr)
 		if err == nil {
 			getLocationsFilter.ReceivedAfter = &receivedAfter
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Дата должна быть в формате DD.MM.YYYY HH:MM:SS"})
+			return
 		}
 	}
 
