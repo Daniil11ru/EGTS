@@ -15,3 +15,5 @@ type VehicleTrack struct {
 	VehicleId int32      `json:"vehicle_id"`
 	Locations []Location `json:"locations"`
 }
+
+type GetLocations []VehicleTrack

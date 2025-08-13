@@ -3,8 +3,9 @@ package source
 import (
 	"fmt"
 
-	"github.com/daniil11ru/egts/cli/receiver/api/dto/request"
-	"github.com/daniil11ru/egts/cli/receiver/api/model"
+	"github.com/daniil11ru/egts/cli/receiver/api/dto/db/in/filter"
+	"github.com/daniil11ru/egts/cli/receiver/api/dto/db/in/update"
+	output "github.com/daniil11ru/egts/cli/receiver/api/dto/db/out"
 	"gorm.io/gorm"
 )
 
@@ -16,21 +17,21 @@ func New(db *gorm.DB) *Postgre {
 	return &Postgre{db: db}
 }
 
-func (s *Postgre) GetVehicles(request request.GetVehicles) ([]model.Vehicle, error) {
-	var vehicles []model.Vehicle
+func (s *Postgre) GetVehicles(filter filter.Vehicles) ([]output.Vehicle, error) {
+	var vehicles []output.Vehicle
 
 	q := s.db.Table("vehicle").Select("id, imei, oid, name, provider_id, moderation_status")
 
-	if request.ProviderID != nil {
-		q = q.Where("provider_id = ?", *request.ProviderID)
+	if filter.ProviderID != nil {
+		q = q.Where("provider_id = ?", *filter.ProviderID)
 	}
 
-	if request.ModerationStatus != nil {
-		q = q.Where("moderation_status = ?", *request.ModerationStatus)
+	if filter.ModerationStatus != nil {
+		q = q.Where("moderation_status = ?", *filter.ModerationStatus)
 	}
 
-	if request.IMEI != nil {
-		q = q.Where("imei = ?", *request.IMEI)
+	if filter.IMEI != nil {
+		q = q.Where("imei = ?", *filter.IMEI)
 	}
 
 	if err := q.Scan(&vehicles).Error; err != nil {
@@ -40,20 +41,20 @@ func (s *Postgre) GetVehicles(request request.GetVehicles) ([]model.Vehicle, err
 	return vehicles, nil
 }
 
-func (s *Postgre) GetVehicle(vehicleId int32) (model.Vehicle, error) {
-	var vehicle model.Vehicle
+func (s *Postgre) GetVehicle(vehicleId int32) (output.Vehicle, error) {
+	var vehicle output.Vehicle
 
 	q := s.db.Table("vehicle").Select("id, imei, oid, name, provider_id, moderation_status").Where("id = ?", vehicleId)
 
 	if err := q.Scan(&vehicle).Error; err != nil {
-		return model.Vehicle{}, err
+		return output.Vehicle{}, err
 	}
 
 	return vehicle, nil
 }
 
-func (s *Postgre) GetLocations(request request.GetLocations) ([]model.Location, error) {
-	var locations []model.Location
+func (s *Postgre) GetLocations(filter filter.Locations) ([]output.Location, error) {
+	var locations []output.Location
 
 	sub := s.db.Table("vehicle_movement").Select(`
 		vehicle_id,
@@ -67,24 +68,24 @@ func (s *Postgre) GetLocations(request request.GetLocations) ([]model.Location, 
 		received_at,
 		ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY sent_at DESC) AS rn`)
 
-	if request.VehicleID != nil {
-		sub = sub.Where("vehicle_id = ?", *request.VehicleID)
+	if filter.VehicleID != nil {
+		sub = sub.Where("vehicle_id = ?", *filter.VehicleID)
 	}
-	if request.SentBefore != nil {
-		sub = sub.Where("sent_at < ?", *request.SentBefore)
+	if filter.SentBefore != nil {
+		sub = sub.Where("sent_at < ?", *filter.SentBefore)
 	}
-	if request.SentAfter != nil {
-		sub = sub.Where("sent_at > ?", *request.SentAfter)
+	if filter.SentAfter != nil {
+		sub = sub.Where("sent_at > ?", *filter.SentAfter)
 	}
-	if request.ReceivedBefore != nil {
-		sub = sub.Where("received_at < ?", *request.ReceivedBefore)
+	if filter.ReceivedBefore != nil {
+		sub = sub.Where("received_at < ?", *filter.ReceivedBefore)
 	}
-	if request.ReceivedAfter != nil {
-		sub = sub.Where("received_at > ?", *request.ReceivedAfter)
+	if filter.ReceivedAfter != nil {
+		sub = sub.Where("received_at > ?", *filter.ReceivedAfter)
 	}
 
 	q := s.db.Table("(?) AS ranked", sub).
-		Where("rn <= ?", request.LocationsLimit).
+		Where("rn <= ?", filter.LocationsLimit).
 		Select("vehicle_id, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at").
 		Order("vehicle_id, sent_at DESC")
 
@@ -94,8 +95,8 @@ func (s *Postgre) GetLocations(request request.GetLocations) ([]model.Location, 
 	return locations, nil
 }
 
-func (s *Postgre) GetApiKeys() ([]model.ApiKey, error) {
-	var apiKeys []model.ApiKey
+func (s *Postgre) GetApiKeys() ([]output.ApiKey, error) {
+	var apiKeys []output.ApiKey
 
 	if err := s.db.Table("api_key").Select("id, name, hash").Scan(&apiKeys).Error; err != nil {
 		return nil, err
@@ -104,13 +105,13 @@ func (s *Postgre) GetApiKeys() ([]model.ApiKey, error) {
 	return apiKeys, nil
 }
 
-func (s *Postgre) UpdateVehicleByImei(request request.UpdateVehicle) error {
+func (s *Postgre) UpdateVehicleByImei(imei string, update update.VehicleByImei) error {
 	updates := map[string]interface{}{}
-	if request.Name != nil {
-		updates["name"] = *request.Name
+	if update.Name != nil {
+		updates["name"] = *update.Name
 	}
-	if request.ModerationStatus != nil {
-		updates["moderation_status"] = *request.ModerationStatus
+	if update.ModerationStatus != nil {
+		updates["moderation_status"] = *update.ModerationStatus
 	}
 	if len(updates) == 0 {
 		return nil
@@ -120,7 +121,7 @@ func (s *Postgre) UpdateVehicleByImei(request request.UpdateVehicle) error {
 		var ids []int32
 		if err := tx.Table("vehicle").
 			Select("id").
-			Where("imei = ?", request.IMEI).
+			Where("imei = ?", imei).
 			Limit(2).
 			Find(&ids).Error; err != nil {
 			return err
@@ -142,16 +143,16 @@ func (s *Postgre) UpdateVehicleByImei(request request.UpdateVehicle) error {
 	})
 }
 
-func (s *Postgre) UpdateVehicleById(vehicleId int32, request request.UpdateVehicle) error {
+func (s *Postgre) UpdateVehicleById(vehicleId int32, update update.VehicleById) error {
 	updates := map[string]interface{}{}
-	if request.Name != nil {
-		updates["name"] = *request.Name
+	if update.Name != nil {
+		updates["name"] = *update.Name
 	}
-	if request.ModerationStatus != nil {
-		updates["moderation_status"] = *request.ModerationStatus
+	if update.ModerationStatus != nil {
+		updates["moderation_status"] = *update.ModerationStatus
 	}
-	if request.IMEI != nil {
-		updates["imei"] = *request.IMEI
+	if update.IMEI != nil {
+		updates["imei"] = *update.IMEI
 	}
 	if len(updates) == 0 {
 		return nil

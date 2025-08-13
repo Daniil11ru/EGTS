@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 )
 
-type Vehicle struct {
+type GetVehicle struct {
 	ID               int32          `json:"id"`
 	IMEI             string         `json:"imei"`
 	OID              sql.NullInt64  `json:"oid,omitempty"`
@@ -14,8 +14,8 @@ type Vehicle struct {
 	ModerationStatus string         `json:"moderation_status"`
 }
 
-func (v Vehicle) MarshalJSON() ([]byte, error) {
-	type Alias Vehicle
+func (v GetVehicle) MarshalJSON() ([]byte, error) {
+	type Alias GetVehicle
 	aux := &struct {
 		OID  interface{} `json:"oid,omitempty"`
 		Name interface{} `json:"name,omitempty"`
@@ -38,3 +38,5 @@ func (v Vehicle) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(aux)
 }
+
+type GetVehicles []GetVehicle

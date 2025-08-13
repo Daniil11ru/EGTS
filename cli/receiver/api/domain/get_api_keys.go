@@ -1,15 +1,15 @@
 package domain
 
-import "github.com/daniil11ru/egts/cli/receiver/api/model"
+import output "github.com/daniil11ru/egts/cli/receiver/api/dto/db/out"
 
 type ApiKeysRepository interface {
-	GetApiKeys() ([]model.ApiKey, error)
+	GetApiKeys() ([]output.ApiKey, error)
 }
 
 type GetApiKeys struct {
 	ApiKeysRepository ApiKeysRepository
 }
 
-func (domain *GetApiKeys) Run() ([]model.ApiKey, error) {
+func (domain *GetApiKeys) Run() ([]output.ApiKey, error) {
 	return domain.ApiKeysRepository.GetApiKeys()
 }

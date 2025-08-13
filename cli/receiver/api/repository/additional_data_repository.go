@@ -1,12 +1,12 @@
 package repository
 
 import (
-	"github.com/daniil11ru/egts/cli/receiver/api/model"
+	output "github.com/daniil11ru/egts/cli/receiver/api/dto/db/out"
 	"github.com/daniil11ru/egts/cli/receiver/api/source"
 )
 
 type AdditionalData interface {
-	GetApiKeys() ([]model.ApiKey, error)
+	GetApiKeys() ([]output.ApiKey, error)
 }
 
 type AdditionalDataSimple struct {
@@ -17,6 +17,6 @@ func NewAdditionalDataSimple(postgreSource *source.Postgre) *AdditionalDataSimpl
 	return &AdditionalDataSimple{PostgreSource: postgreSource}
 }
 
-func (r *AdditionalDataSimple) GetApiKeys() ([]model.ApiKey, error) {
+func (r *AdditionalDataSimple) GetApiKeys() ([]output.ApiKey, error) {
 	return r.PostgreSource.GetApiKeys()
 }

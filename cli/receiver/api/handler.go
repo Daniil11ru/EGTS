@@ -7,9 +7,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/daniil11ru/egts/cli/receiver/api/dto/db/in/filter"
+	"github.com/daniil11ru/egts/cli/receiver/api/dto/db/in/update"
+	output "github.com/daniil11ru/egts/cli/receiver/api/dto/db/out"
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/request"
 	"github.com/daniil11ru/egts/cli/receiver/api/dto/response"
-	"github.com/daniil11ru/egts/cli/receiver/api/model"
 	"github.com/daniil11ru/egts/cli/receiver/api/repository"
 	"github.com/daniil11ru/egts/cli/receiver/types"
 	"github.com/daniil11ru/egts/cli/receiver/util"
@@ -26,33 +28,33 @@ func NewHandler(repository repository.BusinessData) *Handler {
 }
 
 func (h *Handler) GetVehicles(c *gin.Context) {
-	req := request.GetVehicles{}
+	getVehiclesFilter := filter.Vehicles{}
 
 	if providerIdStr := c.Query("provider_id"); providerIdStr != "" {
 		providerId, err := strconv.Atoi(providerIdStr)
 		if err == nil {
 			providerId32 := int32(providerId)
-			req.ProviderID = &providerId32
+			getVehiclesFilter.ProviderID = &providerId32
 		}
 	}
 
 	if moderationStatusStr := c.Query("moderation_status"); moderationStatusStr != "" {
 		moderationStatus := types.ModerationStatus(moderationStatusStr)
-		req.ModerationStatus = &moderationStatus
+		getVehiclesFilter.ModerationStatus = &moderationStatus
 	}
 
 	if imei := c.Query("imei"); imei != "" {
-		req.IMEI = &imei
+		getVehiclesFilter.IMEI = &imei
 	}
 
-	vehicles, err := h.Repository.GetVehicles(req)
+	vehicles, err := h.Repository.GetVehicles(getVehiclesFilter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	response := util.Map(vehicles, func(item model.Vehicle) response.Vehicle {
-		return response.Vehicle{
+	resp := response.GetVehicles(util.Map(vehicles, func(item output.Vehicle) response.GetVehicle {
+		return response.GetVehicle{
 			ID:               item.ID,
 			IMEI:             strconv.FormatInt(item.IMEI, 10),
 			OID:              item.OID,
@@ -60,9 +62,9 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 			ProviderID:       item.ProviderID,
 			ModerationStatus: item.ModerationStatus,
 		}
-	})
+	}))
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, resp)
 }
 
 func (h *Handler) GetVehicle(c *gin.Context) {
@@ -77,7 +79,7 @@ func (h *Handler) GetVehicle(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
-	response := response.Vehicle{
+	resp := response.GetVehicle{
 		ID:               vehicle.ID,
 		IMEI:             strconv.FormatInt(vehicle.IMEI, 10),
 		OID:              vehicle.OID,
@@ -86,27 +88,32 @@ func (h *Handler) GetVehicle(c *gin.Context) {
 		ModerationStatus: vehicle.ModerationStatus,
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, resp)
 }
 
 func (h *Handler) GetVehiclesExcel(c *gin.Context) {
-	req := request.GetVehiclesExcel{}
+	getVehiclesFilter := filter.Vehicles{}
 
-	if providerIdStr := c.Query("provider_id"); providerIdStr != "" {
-		if providerId, err := strconv.Atoi(providerIdStr); err == nil {
-			providerId32 := int32(providerId)
-			req.ProviderID = &providerId32
+	if s := c.Query("provider_id"); s != "" {
+		v, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "некоррректный provider_id"})
+			return
 		}
+		id := int32(v)
+		getVehiclesFilter.ProviderID = &id
 	}
 
-	if moderationStatusStr := c.Query("moderation_status"); moderationStatusStr != "" {
-		moderationStatus := types.ModerationStatus(moderationStatusStr)
-		req.ModerationStatus = &moderationStatus
+	if s := c.Query("moderation_status"); s != "" {
+		ms := types.ModerationStatus(s)
+		if !ms.IsValid() {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный moderation_status"})
+			return
+		}
+		getVehiclesFilter.ModerationStatus = &ms
 	}
 
-	generalReq := request.GetVehicles{ProviderID: req.ProviderID, ModerationStatus: req.ModerationStatus}
-
-	vehicles, err := h.Repository.GetVehicles(generalReq)
+	vehicles, err := h.Repository.GetVehicles(getVehiclesFilter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -166,52 +173,52 @@ func (h *Handler) GetVehiclesExcel(c *gin.Context) {
 }
 
 func (h *Handler) GetLocations(c *gin.Context) {
-	request := request.GetLocations{}
+	getLocationsFilter := filter.Locations{}
 
 	const timeLayout = "02.01.2006 15:04:05"
 
 	if locationsLimitStr := c.Query("locations_limit"); locationsLimitStr != "" {
 		locationsLimit, err := strconv.Atoi(locationsLimitStr)
 		if err == nil {
-			request.LocationsLimit = int64(locationsLimit)
+			getLocationsFilter.LocationsLimit = int64(locationsLimit)
 		}
 	} else {
-		request.LocationsLimit = 10
+		getLocationsFilter.LocationsLimit = 10
 	}
 
 	if vehicleIdStr := c.Query("vehicle_id"); vehicleIdStr != "" {
 		vehicleId, err := strconv.Atoi(vehicleIdStr)
 		if err == nil {
 			vehicleId32 := int32(vehicleId)
-			request.VehicleID = &vehicleId32
+			getLocationsFilter.VehicleID = &vehicleId32
 		}
 	}
 	if sentBeforeStr := c.Query("sent_before"); sentBeforeStr != "" {
 		sentBefore, err := time.Parse(timeLayout, sentBeforeStr)
 		if err == nil {
-			request.SentBefore = &sentBefore
+			getLocationsFilter.SentBefore = &sentBefore
 		}
 	}
 	if sentAfterStr := c.Query("sent_after"); sentAfterStr != "" {
 		sentAfter, err := time.Parse(timeLayout, sentAfterStr)
 		if err == nil {
-			request.SentAfter = &sentAfter
+			getLocationsFilter.SentAfter = &sentAfter
 		}
 	}
 	if receivedBeforeStr := c.Query("received_before"); receivedBeforeStr != "" {
 		receivedBefore, err := time.Parse(timeLayout, receivedBeforeStr)
 		if err == nil {
-			request.ReceivedBefore = &receivedBefore
+			getLocationsFilter.ReceivedBefore = &receivedBefore
 		}
 	}
 	if receivedAfterStr := c.Query("received_after"); receivedAfterStr != "" {
 		receivedAfter, err := time.Parse(timeLayout, receivedAfterStr)
 		if err == nil {
-			request.ReceivedAfter = &receivedAfter
+			getLocationsFilter.ReceivedAfter = &receivedAfter
 		}
 	}
 
-	locations, err := h.Repository.GetLocations(request)
+	locations, err := h.Repository.GetLocations(getLocationsFilter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -235,7 +242,7 @@ func (h *Handler) GetLocations(c *gin.Context) {
 		vehicleTracks = append(vehicleTracks, track)
 	}
 
-	c.JSON(http.StatusOK, vehicleTracks)
+	c.JSON(http.StatusOK, response.GetLocations(vehicleTracks))
 }
 
 func (h *Handler) UpdateVehicleByImei(c *gin.Context) {
@@ -252,7 +259,10 @@ func (h *Handler) UpdateVehicleByImei(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Нечего обновлять"})
 		return
 	}
-	if err := h.Repository.UpdateVehicleByImei(req); err != nil {
+	if err := h.Repository.UpdateVehicleByImei(*req.IMEI, update.VehicleByImei{
+		Name:             req.Name,
+		ModerationStatus: req.ModerationStatus,
+	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -277,7 +287,11 @@ func (h *Handler) UpdateVehicleById(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Нечего обновлять"})
 		return
 	}
-	if err := h.Repository.UpdateVehicleById(int32(vehicleId), req); err != nil {
+	if err := h.Repository.UpdateVehicleById(int32(vehicleId), update.VehicleById{
+		Name:             req.Name,
+		ModerationStatus: req.ModerationStatus,
+		IMEI:             req.IMEI,
+	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

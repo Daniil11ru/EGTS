@@ -1,4 +1,4 @@
-package model
+package output
 
 type ApiKey struct {
 	Id   int32  `json:"id"`

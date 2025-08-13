@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/daniil11ru/egts/cli/receiver/api/domain"
-	"github.com/daniil11ru/egts/cli/receiver/api/model"
+	output "github.com/daniil11ru/egts/cli/receiver/api/dto/db/out"
 	"github.com/daniil11ru/egts/cli/receiver/util"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -28,7 +28,7 @@ func NewController(handler *Handler, getApiKeys *domain.GetApiKeys) (*Controller
 	if err != nil {
 		return nil, fmt.Errorf("ошибка получения информации об API-ключах из базы данных: %w", err)
 	}
-	apiKeyHashes := util.Map(ApiKeyAttributes, func(item model.ApiKey) string {
+	apiKeyHashes := util.Map(ApiKeyAttributes, func(item output.ApiKey) string {
 		return item.Hash
 	})
 

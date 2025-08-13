@@ -1,8 +1,8 @@
-package request
+package filter
 
 import "time"
 
-type GetLocations struct {
+type Locations struct {
 	VehicleID      *int32
 	SentBefore     *time.Time
 	SentAfter      *time.Time

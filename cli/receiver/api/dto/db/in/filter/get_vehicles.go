@@ -1,10 +1,10 @@
-package request
+package filter
 
 import (
 	"github.com/daniil11ru/egts/cli/receiver/types"
 )
 
-type GetVehicles struct {
+type Vehicles struct {
 	ProviderID       *int32
 	ModerationStatus *types.ModerationStatus
 	IMEI             *string
