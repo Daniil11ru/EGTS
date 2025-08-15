@@ -214,6 +214,7 @@ func (s *SavePacket) resolveModerationStatus(id int32) (types.ModerationStatus, 
 
 func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
 	if data.Latitude == 0 || data.Longitude == 0 || data.OID == 0 {
+		logrus.Debug(data)
 		return fmt.Errorf("широта, долгота и OID не должны быть пустыми или иметь нулевое значение")
 	}
 
