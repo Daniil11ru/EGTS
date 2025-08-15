@@ -262,7 +262,7 @@ func (p *PrimarySource) AddVehicle(v types.Vehicle) (int32, error) {
 
 	const q = `
         INSERT INTO vehicle (imei, name, provider_id, moderation_status)
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4)
         RETURNING id
     `
 	var id int32
