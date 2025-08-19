@@ -14,6 +14,7 @@ type PrimarySource interface {
 	GetAllProviders() ([]types.Provider, error)
 	GetVehicleByID(id int32) (types.Vehicle, error)
 	GetVehiclesByProviderIP(ip string) ([]types.Vehicle, error)
+	GetVehiclesByProviderID(providerID int32) ([]types.Vehicle, error)
 	GetVehicleByOID(OID uint32) (types.Vehicle, error)
 	GetVehiclesByOIDAndProviderID(OID uint32, providerID int32) ([]types.Vehicle, error)
 	AddVehicle(v types.Vehicle) (int32, error)

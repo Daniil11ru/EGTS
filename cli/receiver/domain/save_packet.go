@@ -3,7 +3,6 @@ package domain
 import (
 	"fmt"
 	"math/bits"
-	"strings"
 	"time"
 
 	repository "github.com/daniil11ru/egts/cli/receiver/repository/primary"
@@ -19,27 +18,9 @@ type SavePacket struct {
 	AddVehicleMovementMonthStart int
 	AddVehicleMovementMonthEnd   int
 
-	ipToProviderId          map[string]int32
 	vehicleIdToLastPosition map[int32]types.Position3D
 
 	cronScheduler *cron.Cron
-}
-
-func (domain *SavePacket) fillIpToProviderId() error {
-	domain.ipToProviderId = make(map[string]int32)
-
-	providers, err := domain.PrimaryRepository.GetAllProviders()
-	if err != nil {
-		return fmt.Errorf("не удалось получить список провайдеров: %w", err)
-	}
-
-	for _, provider := range providers {
-		if !strings.Contains(provider.IP, "*") {
-			domain.ipToProviderId[provider.IP] = provider.ID
-		}
-	}
-
-	return nil
 }
 
 func (domain *SavePacket) fillVehicleIdToLastPosition() error {
@@ -61,10 +42,6 @@ func (domain *SavePacket) fillVehicleIdToLastPosition() error {
 }
 
 func (domain *SavePacket) Initialize() error {
-	if err := domain.fillIpToProviderId(); err != nil {
-		return fmt.Errorf("не удалось инициализировать кэш провайдеров: %w", err)
-	}
-
 	if err := domain.fillVehicleIdToLastPosition(); err != nil {
 		return fmt.Errorf("не удалось инициализировать кэш транспорта: %w", err)
 	}
@@ -76,11 +53,11 @@ func (domain *SavePacket) Initialize() error {
 	domain.cronScheduler = cron.New(cron.WithLocation(loc))
 
 	_, err := domain.cronScheduler.AddFunc("0 3 * * *", func() {
-		logrus.Info("Запуск запланированного обновления кэша провайдеров")
-		if err := domain.fillIpToProviderId(); err != nil {
-			logrus.Errorf("Ошибка обновления кэша провайдеров: %v", err)
+		logrus.Info("Запуск запланированного обновления кэша транспорта")
+		if err := domain.fillVehicleIdToLastPosition(); err != nil {
+			logrus.Errorf("Ошибка обновления кэша транспорта: %v", err)
 		} else {
-			logrus.Info("Кэш провайдеров успешно обновлен")
+			logrus.Info("Кэш транспорта успешно обновлен")
 		}
 	})
 
@@ -184,24 +161,19 @@ func (domain *SavePacket) filterVehiclesByOID(OID uint32, vehicles []types.Vehic
 	return result, nil
 }
 
-func (s *SavePacket) findVehicles(OID uint32, providerIP string) ([]types.Vehicle, error) {
-	providerID, getProviderIDError := s.PrimaryRepository.GetProviderIDByIP(providerIP)
-	if getProviderIDError != nil {
-		return []types.Vehicle{}, getProviderIDError
-	}
-
-	vehicles, getVehiclesByOIDAndProviderIDError := s.PrimaryRepository.GetVehiclesByOIDAndProviderID(OID, providerID)
-	if getVehiclesByOIDAndProviderIDError == nil {
+func (s *SavePacket) findVehicles(OID uint32, providerID int32) ([]types.Vehicle, error) {
+	vehicles, err := s.PrimaryRepository.GetVehiclesByOIDAndProviderID(OID, providerID)
+	if err == nil {
 		return vehicles, nil
 	}
 
-	vehicles, getVehiclesByProviderIPError := s.PrimaryRepository.GetVehiclesByProviderIP(providerIP)
-	if getVehiclesByProviderIPError != nil {
-		return []types.Vehicle{}, getVehiclesByProviderIPError
+	vehicles, err = s.PrimaryRepository.GetVehiclesByProviderID(providerID)
+	if err != nil {
+		return []types.Vehicle{}, err
 	}
-	vehicles, filterVehiclesByOIDError := s.filterVehiclesByOID(OID, vehicles)
-	if filterVehiclesByOIDError != nil {
-		return []types.Vehicle{}, filterVehiclesByOIDError
+	vehicles, err = s.filterVehiclesByOID(OID, vehicles)
+	if err != nil {
+		return []types.Vehicle{}, err
 	}
 
 	return vehicles, nil
@@ -212,15 +184,10 @@ func (s *SavePacket) resolveModerationStatus(id int32) (types.ModerationStatus, 
 	return moderationStatus, err
 }
 
-func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
+func (s *SavePacket) Run(data *util.NavigationRecord, providerID int32) error {
 	if data.Latitude == 0 || data.Longitude == 0 || data.OID == 0 {
 		logrus.Debugf("OID: %d, широта: %f, долгота: %f", data.OID, data.Latitude, data.Longitude)
 		return fmt.Errorf("широта, долгота и OID не должны быть пустыми или иметь нулевое значение")
-	}
-
-	providerID, getProviderIDError := s.PrimaryRepository.GetProviderIDByIP(providerIP)
-	if getProviderIDError != nil {
-		return fmt.Errorf("не удалось определить провайдера по IP %s: %w", providerIP, getProviderIDError)
 	}
 
 	oid := data.OID
@@ -232,7 +199,7 @@ func (s *SavePacket) Run(data *util.NavigationRecord, providerIP string) error {
 	}
 
 	var vehicleID int32
-	vehicles, err := s.findVehicles(oid, providerIP)
+	vehicles, err := s.findVehicles(oid, providerID)
 	if err != nil {
 		return fmt.Errorf("не удалось найти транспорт по OID %d: %w", oid, err)
 	} else if len(vehicles) == 0 {

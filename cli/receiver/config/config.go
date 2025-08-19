@@ -11,7 +11,7 @@ import (
 
 type Config struct {
 	Host                           string            `yaml:"host"`
-	Port                           string            `yaml:"port"`
+	Ports                          map[int32]string  `yaml:"ports"`
 	ConnectionTTL                  int               `yaml:"connection_ttl"`
 	LogLevel                       string            `yaml:"log_level"`
 	LogFilePath                    string            `yaml:"log_file_path"`
@@ -26,8 +26,12 @@ type Config struct {
 func (s *Config) GetEmptyConnectionTTL() time.Duration {
 	return time.Duration(s.ConnectionTTL) * time.Second
 }
-func (s *Config) GetListenAddress() string {
-	return s.Host + ":" + s.Port
+func (s *Config) GetListenAddresses() map[int32]string {
+	addresses := make(map[int32]string)
+	for providerID, port := range s.Ports {
+		addresses[providerID] = s.Host + ":" + port
+	}
+	return addresses
 }
 
 func (s *Config) GetLogLevel() log.Level {
