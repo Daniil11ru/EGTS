@@ -285,6 +285,7 @@ func (s *Server) handleAppData(conn net.Conn, pkg *egts.Package, receivedTimesta
 				log.Debug("Встречена подзапись EGTS_SR_ABS_LOOPIN_DATA")
 			case *egts.SrPosData:
 				log.Debug("Разбор подзаписи EGTS_SR_POS_DATA")
+				log.Debugf("OID: %d, широта: %f, долгота: %f", client, subRecData.Latitude, subRecData.Longitude)
 				isPkgSave = true
 				exportPacket.SentTimestamp = subRecData.NavigationTime.Unix()
 				exportPacket.ReceivedTimestamp = receivedTimestamp
