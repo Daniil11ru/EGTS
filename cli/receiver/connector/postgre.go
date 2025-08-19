@@ -1,4 +1,4 @@
-package implementation
+package connector
 
 import (
 	"database/sql"
@@ -18,7 +18,7 @@ type Settings struct {
 	SSLMode  string
 }
 
-type Connector struct {
+type DefaultConnector struct {
 	connection *sql.DB
 	settings   Settings
 }
@@ -33,7 +33,7 @@ func getOptionValue(optionName string, optionDefaultValue string, settings map[s
 	return optionValue
 }
 
-func (c *Connector) FillSettings(settings map[string]string) {
+func (c *DefaultConnector) FillSettings(settings map[string]string) {
 	c.settings.Driver = getOptionValue("driver", "postgres", settings)
 	c.settings.Host = getOptionValue("host", "localhost", settings)
 	c.settings.Port = getOptionValue("port", "5432", settings)
@@ -43,7 +43,7 @@ func (c *Connector) FillSettings(settings map[string]string) {
 	c.settings.SSLMode = getOptionValue("sslmode", "disable", settings)
 }
 
-func (c *Connector) Connect(settings map[string]string) error {
+func (c *DefaultConnector) Connect(settings map[string]string) error {
 	var err error
 	if settings == nil {
 		return fmt.Errorf("некорректная ссылка на конфигурацию")
@@ -68,10 +68,10 @@ func (c *Connector) Connect(settings map[string]string) error {
 	return err
 }
 
-func (c *Connector) GetConnection() *sql.DB {
+func (c *DefaultConnector) GetConnection() *sql.DB {
 	return c.connection
 }
 
-func (c *Connector) Close() error {
+func (c *DefaultConnector) Close() error {
 	return c.connection.Close()
 }

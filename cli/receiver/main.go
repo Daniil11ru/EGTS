@@ -11,7 +11,7 @@ import (
 	apirepo "github.com/daniil11ru/egts/cli/receiver/api/repository"
 	apisrc "github.com/daniil11ru/egts/cli/receiver/api/source"
 	"github.com/daniil11ru/egts/cli/receiver/config"
-	connector "github.com/daniil11ru/egts/cli/receiver/connector/implementation"
+	connector "github.com/daniil11ru/egts/cli/receiver/connector"
 	"github.com/daniil11ru/egts/cli/receiver/domain"
 	repo "github.com/daniil11ru/egts/cli/receiver/repository/primary"
 	"github.com/daniil11ru/egts/cli/receiver/server"
@@ -107,7 +107,7 @@ func configureLogging(config config.Config) {
 }
 
 func runServer(config config.Config) {
-	connector := connector.Connector{}
+	connector := connector.DefaultConnector{}
 	if err := connector.Connect(config.Store); err != nil {
 		log.Fatalf("Не удалось подключиться к хранилищу: %v", err)
 		return
