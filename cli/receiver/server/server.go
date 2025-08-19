@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/daniil11ru/egts/cli/receiver/domain"
@@ -23,66 +21,15 @@ const (
 )
 
 type Server struct {
-	Address        string
-	TTL            time.Duration
-	ProviderID     int32
-	SavePacket     *domain.SavePacket
-	Listener       net.Listener
-	GetIPWhiteList domain.GetIPWhiteList
+	Address    string
+	TTL        time.Duration
+	ProviderID int32
+	SavePacket *domain.SavePacket
+	Listener   net.Listener
 }
 
-func NewServer(addr string, ttl time.Duration, providerID int32, savePacket *domain.SavePacket, getIPWhiteList domain.GetIPWhiteList) *Server {
-	return &Server{Address: addr, TTL: ttl, ProviderID: providerID, SavePacket: savePacket, GetIPWhiteList: getIPWhiteList}
-}
-
-func extractIp(ipAndPort string) (string, error) {
-	var re = regexp.MustCompile(`^((?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}):(\d{1,5})$`)
-	matches := re.FindStringSubmatch(ipAndPort)
-	if matches == nil {
-		return "", fmt.Errorf("не удалось получить IP-адрес")
-	}
-
-	return matches[1], nil
-}
-
-func isInWhiteList(ip string, whiteList []string) bool {
-	if net.ParseIP(ip) == nil {
-		return false
-	}
-	isInWhiteList := false
-
-ipCheckLoop:
-	for _, entry := range whiteList {
-		if entry == ip {
-			isInWhiteList = true
-			break
-		}
-
-		if strings.Contains(entry, "*") {
-			partsEntry := strings.Split(entry, ".")
-			partsIP := strings.Split(ip, ".")
-
-			if partsEntry[len(partsEntry)-1] != "*" {
-				continue
-			}
-
-			prefixEntry := partsEntry[:len(partsEntry)-1]
-			if len(prefixEntry) > len(partsIP) {
-				continue
-			}
-
-			for i := 0; i < len(prefixEntry); i++ {
-				if prefixEntry[i] != partsIP[i] {
-					continue ipCheckLoop
-				}
-			}
-
-			isInWhiteList = true
-			break
-		}
-	}
-
-	return isInWhiteList
+func NewServer(addr string, ttl time.Duration, providerID int32, savePacket *domain.SavePacket) *Server {
+	return &Server{Address: addr, TTL: ttl, ProviderID: providerID, SavePacket: savePacket}
 }
 
 func (server *Server) Run() error {
@@ -93,31 +40,12 @@ func (server *Server) Run() error {
 	}
 	defer server.Listener.Close()
 
-	log.WithField("addr", server.Address).Info("Запущен сервер")
-
-	whiteList, err := server.GetIPWhiteList.Run()
-	if err != nil || len(whiteList) == 0 {
-		return fmt.Errorf("не удалось получить белый список IP: %w", err)
-	}
-	log.Debug("Белый список IP: ", whiteList)
+	log.WithField("addr", server.Address).Info("Запущен сервер для обработки пакетов от провайдера с ID ", server.ProviderID)
 
 	for {
 		conn, err := server.Listener.Accept()
 		if err != nil {
 			log.WithField("err", err).Error("Ошибка соединения")
-			continue
-		}
-
-		ip, getIpFromIPAndPortErr := extractIp(conn.RemoteAddr().String())
-		if getIpFromIPAndPortErr != nil {
-			log.Warn("Адрес отправителя не является IP-адресом")
-			conn.Close()
-			continue
-		}
-
-		if !isInWhiteList(ip, whiteList) {
-			log.Warnf("IP %s не находится в белом списке", ip)
-			conn.Close()
 			continue
 		}
 

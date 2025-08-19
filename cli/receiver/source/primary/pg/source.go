@@ -3,7 +3,6 @@ package pg
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	connector "github.com/daniil11ru/egts/cli/receiver/connector"
@@ -63,7 +62,7 @@ func (p *PrimarySource) GetAllProviders() ([]types.Provider, error) {
 		return nil, err
 	}
 
-	const q = `SELECT id, name, ip FROM provider`
+	const q = `SELECT id, name FROM provider`
 	rows, err := db.Query(q)
 	if err != nil {
 		return nil, err
@@ -73,16 +72,9 @@ func (p *PrimarySource) GetAllProviders() ([]types.Provider, error) {
 	var providers []types.Provider
 	for rows.Next() {
 		var pr types.Provider
-		var ip sql.NullString
 
-		if err := rows.Scan(&pr.ID, &pr.Name, &ip); err != nil {
+		if err := rows.Scan(&pr.ID, &pr.Name); err != nil {
 			return nil, err
-		}
-
-		if ip.Valid {
-			pr.IP = ip.String
-		} else {
-			pr.IP = ""
 		}
 
 		providers = append(providers, pr)
@@ -93,51 +85,6 @@ func (p *PrimarySource) GetAllProviders() ([]types.Provider, error) {
 	}
 
 	return providers, nil
-}
-
-func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]types.Vehicle, error) {
-	db, err := p.db()
-	if err != nil {
-		return nil, err
-	}
-
-	const q = `
-        SELECT v.id,
-               v.imei,
-               v.name,
-               v.provider_id,
-               v.moderation_status
-        FROM vehicle v
-        JOIN provider p ON p.id = v.provider_id
-        WHERE p.ip = $1
-    `
-
-	rows, err := db.Query(q, ip)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var vehicles []types.Vehicle
-	for rows.Next() {
-		var v types.Vehicle
-		if err := rows.Scan(
-			&v.ID,
-			&v.IMEI,
-			&v.Name,
-			&v.ProviderID,
-			&v.ModerationStatus,
-		); err != nil {
-			return nil, err
-		}
-		vehicles = append(vehicles, v)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return vehicles, nil
 }
 
 func (p *PrimarySource) GetVehiclesByProviderID(providerID int32) ([]types.Vehicle, error) {
@@ -182,7 +129,7 @@ func (p *PrimarySource) GetVehiclesByProviderID(providerID int32) ([]types.Vehic
 	}
 
 	if len(vehicles) == 0 {
-		return []types.Vehicle{}, fmt.Errorf("транспорт с ID провайдера %d не найден", providerID)
+		return []types.Vehicle{}, nil
 	}
 
 	return vehicles, nil
@@ -309,12 +256,12 @@ func (p *PrimarySource) AddVehicle(v types.Vehicle) (int32, error) {
 	}
 
 	const q = `
-        INSERT INTO vehicle (imei, name, provider_id, moderation_status)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO vehicle (imei, oid, name, provider_id, moderation_status)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING id
     `
 	var id int32
-	if err := db.QueryRow(q, v.IMEI, v.Name, v.ProviderID, v.ModerationStatus).Scan(&id); err != nil {
+	if err := db.QueryRow(q, v.IMEI, v.OID, v.Name, v.ProviderID, v.ModerationStatus).Scan(&id); err != nil {
 		return 0, err
 	}
 
@@ -346,146 +293,6 @@ func (p *PrimarySource) UpdateVehicleOID(id int32, oid uint32) error {
 	}
 
 	return nil
-}
-
-func (p *PrimarySource) GetProviderByIP(ip string) (types.Provider, error) {
-	db, err := p.db()
-	if err != nil {
-		return types.Provider{}, err
-	}
-
-	const exactQuery = `
-        SELECT id, name, ip
-        FROM provider
-        WHERE ip = $1
-    `
-	row := db.QueryRow(exactQuery, ip)
-
-	var exactProvider types.Provider
-	var exactNullableIP sql.NullString
-
-	err = row.Scan(&exactProvider.ID, &exactProvider.Name, &exactNullableIP)
-	if err == nil {
-		if exactNullableIP.Valid {
-			exactProvider.IP = exactNullableIP.String
-		}
-		return exactProvider, nil
-	} else if err != sql.ErrNoRows {
-		return types.Provider{}, err
-	}
-
-	const maskQuery = `
-        SELECT id, name, ip
-        FROM provider
-        WHERE ip LIKE '%*%'
-    `
-	rows, err := db.Query(maskQuery)
-	if err != nil {
-		return types.Provider{}, err
-	}
-	defer rows.Close()
-
-	var matchingProviders []types.Provider
-	for rows.Next() {
-		var pr types.Provider
-		var nullableIP sql.NullString
-		if err := rows.Scan(&pr.ID, &pr.Name, &nullableIP); err != nil {
-			return types.Provider{}, err
-		}
-
-		if nullableIP.Valid {
-			pr.IP = nullableIP.String
-		} else {
-			continue
-		}
-
-		if ipMatchesMask(ip, pr.IP) {
-			matchingProviders = append(matchingProviders, pr)
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return types.Provider{}, err
-	}
-
-	switch len(matchingProviders) {
-	case 0:
-		return types.Provider{}, fmt.Errorf("провайдер с IP %s не найден", ip)
-	case 1:
-		return matchingProviders[0], nil
-	default:
-		ids := make([]int32, 0, len(matchingProviders))
-		for _, p := range matchingProviders {
-			ids = append(ids, p.ID)
-		}
-		return types.Provider{}, fmt.Errorf(
-			"найдено несколько провайдеров для IP %s: %v",
-			ip, ids,
-		)
-	}
-}
-
-func ipMatchesMask(ip, mask string) bool {
-	if !strings.Contains(mask, "*") {
-		return ip == mask
-	}
-
-	ipParts := strings.Split(ip, ".")
-	maskParts := strings.Split(mask, ".")
-
-	if len(ipParts) != 4 || len(maskParts) > 4 {
-		return false
-	}
-
-	for i, maskPart := range maskParts {
-		if i >= len(ipParts) {
-			return false
-		}
-
-		if maskPart == "*" {
-			continue
-		}
-
-		if maskPart != ipParts[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (p *PrimarySource) GetAllIPs() ([]string, error) {
-	db, err := p.db()
-	if err != nil {
-		return nil, err
-	}
-
-	const q = `
-        SELECT DISTINCT ip
-        FROM provider
-        WHERE ip IS NOT NULL AND ip <> ''
-    `
-
-	rows, err := db.Query(q)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var ips []string
-	for rows.Next() {
-		var ip string
-		if err := rows.Scan(&ip); err != nil {
-			return nil, err
-		}
-		ips = append(ips, ip)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return ips, nil
 }
 
 func (p *PrimarySource) AddVehicleMovement(data *util.NavigationRecord, vehicleID int) (int32, error) {

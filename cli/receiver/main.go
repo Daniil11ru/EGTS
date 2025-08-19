@@ -47,7 +47,7 @@ func main() {
 
 	go runServer(config)
 
-	go runApi(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Store["host"], config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]), 7001)
+	go runApi(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Store["host"], config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]), config.ApiPort)
 
 	select {}
 }
@@ -128,8 +128,6 @@ func runServer(config config.Config) {
 		return
 	}
 
-	getIpWhiteList := domain.GetIPWhiteList{PrimaryRepository: primaryRepository}
-
 	defer savePacket.Shutdown()
 	defer connector.Close()
 
@@ -140,7 +138,7 @@ func runServer(config config.Config) {
 	log.Info("Запланирована ежедневная оптимизация геометрии треков")
 
 	for providerID, addr := range config.GetListenAddresses() {
-		srv := server.NewServer(addr, config.GetEmptyConnectionTTL(), providerID, &savePacket, getIpWhiteList)
+		srv := server.NewServer(addr, config.GetEmptyConnectionTTL(), providerID, &savePacket)
 		go func(a string, s *server.Server) {
 			if err := s.Run(); err != nil {
 				log.Fatalf("Не удалось запустить сервер на %s: %v", a, err)
@@ -151,7 +149,7 @@ func runServer(config config.Config) {
 	select {}
 }
 
-func runApi(dsn string, port int16) {
+func runApi(dsn string, port int32) {
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		DSN:                  dsn,
 		PreferSimpleProtocol: true,

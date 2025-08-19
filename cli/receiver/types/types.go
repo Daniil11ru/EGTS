@@ -21,7 +21,6 @@ type Vehicle struct {
 type Provider struct {
 	ID   int32
 	Name string
-	IP   string
 }
 
 type Movement2D struct {

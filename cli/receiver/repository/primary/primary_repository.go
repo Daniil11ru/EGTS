@@ -22,10 +22,6 @@ func (p *PrimaryRepository) GetVehicleModerationStatus(id int32) (types.Moderati
 	return vehicle.ModerationStatus, err
 }
 
-func (p *PrimaryRepository) GetVehiclesByProviderIP(ip string) ([]types.Vehicle, error) {
-	return p.Source.GetVehiclesByProviderIP(ip)
-}
-
 func (p *PrimaryRepository) GetVehiclesByProviderID(providerID int32) ([]types.Vehicle, error) {
 	return p.Source.GetVehiclesByProviderID(providerID)
 }
@@ -37,6 +33,7 @@ func (p *PrimaryRepository) GetVehiclesByOIDAndProviderID(OID uint32, providerID
 func (p *PrimaryRepository) AddIndefiniteVehicle(OID uint32, providerID int32) (int32, error) {
 	return p.Source.AddVehicle(types.Vehicle{
 		IMEI:             int64(OID),
+		OID:              sql.NullInt64{Int64: int64(OID), Valid: true},
 		Name:             sql.NullString{String: "", Valid: false},
 		ProviderID:       providerID,
 		ModerationStatus: types.ModerationStatusPending,
@@ -50,11 +47,6 @@ func (p *PrimaryRepository) UpdateVehicleOID(id int32, OID uint32) error {
 
 func (p *PrimaryRepository) GetAllProviders() ([]types.Provider, error) {
 	return p.Source.GetAllProviders()
-}
-
-func (p *PrimaryRepository) GetProviderIDByIP(ip string) (int32, error) {
-	provider, err := p.Source.GetProviderByIP(ip)
-	return provider.ID, err
 }
 
 func (p *PrimaryRepository) AddVehicleMovement(data *util.NavigationRecord, vehicleID int) (int32, error) {

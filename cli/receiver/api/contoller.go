@@ -83,7 +83,7 @@ func NewController(handler *Handler, getApiKeys *domain.GetApiKeys) (*Controller
 	return &Controller{Handler: handler, Router: router, GetApiKeys: getApiKeys, ApiKeyHashes: apiKeyHashes}, nil
 }
 
-func (c *Controller) Run(port int16) error {
+func (c *Controller) Run(port int32) error {
 	err := c.Router.Run(":" + strconv.Itoa(int(port)))
 	if err != nil {
 		return fmt.Errorf("ошибка запуска API: %w", err)

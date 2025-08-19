@@ -1,0 +1,2 @@
+ALTER TABLE provider
+DROP COLUMN ip;

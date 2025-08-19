@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -11,7 +12,8 @@ import (
 
 type Config struct {
 	Host                           string            `yaml:"host"`
-	Ports                          map[int32]string  `yaml:"ports"`
+	Ports                          map[int32]int32   `yaml:"ports"`
+	ApiPort                        int32             `yaml:"api_port"`
 	ConnectionTTL                  int               `yaml:"connection_ttl"`
 	LogLevel                       string            `yaml:"log_level"`
 	LogFilePath                    string            `yaml:"log_file_path"`
@@ -29,7 +31,7 @@ func (s *Config) GetEmptyConnectionTTL() time.Duration {
 func (s *Config) GetListenAddresses() map[int32]string {
 	addresses := make(map[int32]string)
 	for providerID, port := range s.Ports {
-		addresses[providerID] = s.Host + ":" + port
+		addresses[providerID] = s.Host + ":" + strconv.Itoa(int(port))
 	}
 	return addresses
 }
