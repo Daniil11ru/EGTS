@@ -140,6 +140,54 @@ func (p *PrimarySource) GetVehiclesByProviderIP(ip string) ([]types.Vehicle, err
 	return vehicles, nil
 }
 
+func (p *PrimarySource) GetVehiclesByProviderID(providerID int32) ([]types.Vehicle, error) {
+	db, err := p.db()
+	if err != nil {
+		return nil, err
+	}
+
+	const q = `
+        SELECT id,
+               imei,
+               name,
+               provider_id,
+               moderation_status
+        FROM vehicle
+        WHERE provider_id = $1
+    `
+
+	rows, err := db.Query(q, providerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var vehicles []types.Vehicle
+	for rows.Next() {
+		var v types.Vehicle
+		if err := rows.Scan(
+			&v.ID,
+			&v.IMEI,
+			&v.Name,
+			&v.ProviderID,
+			&v.ModerationStatus,
+		); err != nil {
+			return nil, err
+		}
+		vehicles = append(vehicles, v)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(vehicles) == 0 {
+		return []types.Vehicle{}, fmt.Errorf("транспорт с ID провайдера %d не найден", providerID)
+	}
+
+	return vehicles, nil
+}
+
 func (p *PrimarySource) GetVehicleByID(id int32) (types.Vehicle, error) {
 	db, err := p.db()
 	if err != nil {

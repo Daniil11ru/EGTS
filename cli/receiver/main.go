@@ -139,12 +139,16 @@ func runServer(config config.Config) {
 	c.Start()
 	log.Info("Запланирована ежедневная оптимизация геометрии треков")
 
-	server := server.NewServer(config.GetListenAddress(), config.GetEmptyConnectionTTL(), &savePacket, getIpWhiteList)
-	err := server.Run()
-	if err != nil {
-		log.Fatalf("Не удалось запустить сервер: %v", err)
-		return
+	for providerID, addr := range config.GetListenAddresses() {
+		srv := server.NewServer(addr, config.GetEmptyConnectionTTL(), providerID, &savePacket, getIpWhiteList)
+		go func(a string, s *server.Server) {
+			if err := s.Run(); err != nil {
+				log.Fatalf("Не удалось запустить сервер на %s: %v", a, err)
+			}
+		}(addr, srv)
 	}
+
+	select {}
 }
 
 func runApi(dsn string, port int16) {

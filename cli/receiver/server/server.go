@@ -25,13 +25,14 @@ const (
 type Server struct {
 	Address        string
 	TTL            time.Duration
+	ProviderID     int32
 	SavePacket     *domain.SavePacket
 	Listener       net.Listener
 	GetIPWhiteList domain.GetIPWhiteList
 }
 
-func NewServer(addr string, ttl time.Duration, savePacket *domain.SavePacket, getIPWhiteList domain.GetIPWhiteList) *Server {
-	return &Server{Address: addr, TTL: ttl, SavePacket: savePacket, GetIPWhiteList: getIPWhiteList}
+func NewServer(addr string, ttl time.Duration, providerID int32, savePacket *domain.SavePacket, getIPWhiteList domain.GetIPWhiteList) *Server {
+	return &Server{Address: addr, TTL: ttl, ProviderID: providerID, SavePacket: savePacket, GetIPWhiteList: getIPWhiteList}
 }
 
 func extractIp(ipAndPort string) (string, error) {
@@ -45,6 +46,9 @@ func extractIp(ipAndPort string) (string, error) {
 }
 
 func isInWhiteList(ip string, whiteList []string) bool {
+	if net.ParseIP(ip) == nil {
+		return false
+	}
 	isInWhiteList := false
 
 ipCheckLoop:
@@ -314,17 +318,12 @@ func (s *Server) handleAppData(conn net.Conn, pkg *egts.Package, receivedTimesta
 
 		exportPacket.OID = client
 		if isPkgSave && recStatus == egtsPcOk {
-			IP, getIPFromIPAndPortErr := extractIp(conn.RemoteAddr().String())
-			if getIPFromIPAndPortErr != nil {
-				log.Warn("Адрес отправителя не является IP-адресом")
-			} else {
-				pkt := exportPacket
-				go func() {
-					if err := s.SavePacket.Run(&pkt, IP); err != nil {
-						log.Warnf("Телематические данные не были сохранены: %s", err)
-					}
-				}()
-			}
+			pkt := exportPacket
+			go func() {
+				if err := s.SavePacket.Run(&pkt, s.ProviderID); err != nil {
+					log.Warnf("Телематические данные не были сохранены: %s", err)
+				}
+			}()
 		}
 	}
 

@@ -1,5 +1,6 @@
 host: "0.0.0.0"
-port: "7000"
+ports:
+  1: "7000"
 connection_ttl: 5
 log_level: "DEBUG"
 log_file_path: "logs/app.log"
