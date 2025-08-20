@@ -156,13 +156,13 @@ func (h *Handler) GetVehiclesExcel(c *gin.Context) {
 			return
 		}
 		if v.OID != nil {
-			if err := f.SetCellValue(sheet, fmt.Sprintf("C%d", row), v.OID); err != nil {
+			if err := f.SetCellValue(sheet, fmt.Sprintf("C%d", row), *v.OID); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 		}
 		if v.Name != nil {
-			if err := f.SetCellValue(sheet, fmt.Sprintf("D%d", row), v.Name); err != nil {
+			if err := f.SetCellValue(sheet, fmt.Sprintf("D%d", row), *v.Name); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
