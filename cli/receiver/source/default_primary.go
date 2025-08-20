@@ -63,21 +63,21 @@ func (s *DefaultPrimary) AddVehicle(v insert.Vehicle) (int32, error) {
 	if v.IMEI == "" || v.ProviderId <= 0 || v.ModerationStatus == "" {
 		return 0, fmt.Errorf("IMEI, ID провайдера и статус модерации не могут быть пустыми")
 	}
-
 	if v.Name != nil && *v.Name == "" {
 		v.Name = nil
 	}
 
 	const q = `
-		INSERT INTO vehicle (imei, oid, name, provider_id, moderation_status)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO vehicle (imei, "oid", name, provider_id, moderation_status)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
 	`
+
 	var id int32
-	if err := s.db.Exec(q, v.IMEI, v.OID, v.Name, v.ProviderId, v.ModerationStatus).Scan(&id).Error; err != nil {
+	if err := s.db.Raw(q, v.IMEI, v.OID, v.Name, v.ProviderId, v.ModerationStatus).
+		Scan(&id).Error; err != nil {
 		return 0, err
 	}
-
 	return id, nil
 }
 
@@ -213,17 +213,24 @@ func (s *DefaultPrimary) UpdateVehicleById(id int32, update update.VehicleById) 
 	return s.db.Table("vehicle").Where("id = ?", id).Updates(updates).Error
 }
 
-func (s *DefaultPrimary) AddLocation(insert insert.Location) (int32, error) {
+func (s *DefaultPrimary) AddLocation(in insert.Location) (int32, error) {
 	const q = `
-               INSERT INTO location (vehicle_id, oid, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-               RETURNING id
-        `
+		INSERT INTO location (
+			vehicle_id, "oid", latitude, longitude, altitude, direction, speed,
+			satellite_count, sent_at, received_at
+		)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		RETURNING id
+	`
 	var id int32
-	if err := s.db.Exec(q, insert.VehicleId, insert.OID, insert.Latitude, insert.Longitude, insert.Altitude, insert.Direction, insert.Speed, insert.SatelliteCount, insert.SentAt, insert.ReceivedAt).Scan(&id).Error; err != nil {
+	err := s.db.Raw(
+		q,
+		in.VehicleId, in.OID, in.Latitude, in.Longitude, in.Altitude,
+		in.Direction, in.Speed, in.SatelliteCount, in.SentAt, in.ReceivedAt,
+	).Scan(&id).Error
+	if err != nil {
 		return 0, err
 	}
-
 	return id, nil
 }
 
