@@ -7,8 +7,8 @@ import (
 )
 
 type Vehicle struct {
-	ID               int32                  `json:"id"`
-	IMEI             string                 `json:"imei"`
+	ID               int32                  `json:"id" gorm:"column:id"`
+	IMEI             string                 `json:"imei" gorm:"column:imei"`
 	OID              *int64                 `json:"oid,omitempty" gorm:"column:oid"`
 	Name             *string                `json:"name,omitempty"`
 	ProviderId       int32                  `json:"provider_id"`

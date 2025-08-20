@@ -30,7 +30,6 @@ func (l Location) MarshalJSON() ([]byte, error) {
 		OID:        l.OID,
 		Latitude:   l.Latitude,
 		Longitude:  l.Longitude,
-		SentAt:     l.SentAt,
 		ReceivedAt: l.ReceivedAt,
 	}
 	if l.Altitude != nil {
