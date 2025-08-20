@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -91,8 +92,12 @@ func main() {
 		LogMaxAgeDays: config.LogMaxAgeDays,
 	})
 
-	applyMigrations(fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+	err = applyMigrations(fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		config.Store["user"], config.Store["password"], config.Store["host"], config.Store["port"], config.Store["database"], config.Store["sslmode"]), config.MigrationsPath)
+	if err != nil {
+		log.Fatalf("Не удалось применить миграции: %v", err)
+		return
+	}
 
 	primarySource, err := source.NewDefaultPrimary(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Store["host"], config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]))
 	if err != nil {
@@ -220,21 +225,22 @@ func runApi(source source.Primary, apiSettings ApiSettings) {
 }
 
 func applyMigrations(databaseUrl, migrationsPath string) error {
-	m, err := migrate.New(
-		migrationsPath,
-		databaseUrl,
-	)
+	m, err := migrate.New(migrationsPath, databaseUrl)
 	if err != nil {
-		return fmt.Errorf("ошибка инициализации миграций: %v", err)
+		return fmt.Errorf("ошибка инициализации миграций: %w", err)
 	}
 	defer m.Close()
 
 	if err := m.Up(); err != nil {
-		if err == migrate.ErrNoChange {
+		if errors.Is(err, migrate.ErrNoChange) {
 			log.Info("Нет новых миграций для применения")
 			return nil
 		}
-		return fmt.Errorf("ошибка применения миграций: %v", err)
+		var d migrate.ErrDirty
+		if errors.As(err, &d) {
+			return fmt.Errorf("миграции остановились на версии %d (dirty)", d.Version)
+		}
+		return fmt.Errorf("ошибка применения миграций: %w", err)
 	}
 
 	log.Info("Миграции успешно применены")
