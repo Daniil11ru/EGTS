@@ -1,0 +1,3 @@
+ALTER TABLE vehicle_movement
+    ALTER COLUMN altitude TYPE SMALLINT,
+    ALTER COLUMN speed TYPE SMALLINT;

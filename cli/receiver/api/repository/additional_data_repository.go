@@ -1,22 +1,22 @@
 package repository
 
 import (
-	output "github.com/daniil11ru/egts/cli/receiver/api/dto/db/out"
-	"github.com/daniil11ru/egts/cli/receiver/api/source"
+	output "github.com/daniil11ru/egts/cli/receiver/dto/db/out"
+	"github.com/daniil11ru/egts/cli/receiver/source"
 )
 
 type AdditionalData interface {
 	GetApiKeys() ([]output.ApiKey, error)
 }
 
-type AdditionalDataSimple struct {
-	PostgreSource *source.Postgre
+type AdditionalDataDefault struct {
+	Source source.Primary
 }
 
-func NewAdditionalDataSimple(postgreSource *source.Postgre) *AdditionalDataSimple {
-	return &AdditionalDataSimple{PostgreSource: postgreSource}
+func NewAdditionalDataDefault(source source.Primary) *AdditionalDataDefault {
+	return &AdditionalDataDefault{Source: source}
 }
 
-func (r *AdditionalDataSimple) GetApiKeys() ([]output.ApiKey, error) {
-	return r.PostgreSource.GetApiKeys()
+func (r *AdditionalDataDefault) GetApiKeys() ([]output.ApiKey, error) {
+	return r.Source.GetApiKeys()
 }

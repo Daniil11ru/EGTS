@@ -9,16 +9,13 @@ import (
 	"github.com/daniil11ru/egts/cli/receiver/api"
 	apidomain "github.com/daniil11ru/egts/cli/receiver/api/domain"
 	apirepo "github.com/daniil11ru/egts/cli/receiver/api/repository"
-	apisrc "github.com/daniil11ru/egts/cli/receiver/api/source"
 	"github.com/daniil11ru/egts/cli/receiver/config"
-	connector "github.com/daniil11ru/egts/cli/receiver/connector"
-	"github.com/daniil11ru/egts/cli/receiver/domain"
-	repo "github.com/daniil11ru/egts/cli/receiver/repository/primary"
 	"github.com/daniil11ru/egts/cli/receiver/server"
-	src "github.com/daniil11ru/egts/cli/receiver/source/primary/pg"
+	"github.com/daniil11ru/egts/cli/receiver/server/domain"
+	repo "github.com/daniil11ru/egts/cli/receiver/server/repository"
+	"github.com/daniil11ru/egts/cli/receiver/source"
 	"github.com/daniil11ru/egts/cli/receiver/util"
 	"github.com/robfig/cron"
-	"gorm.io/gorm"
 
 	"github.com/rifflock/lfshook"
 	log "github.com/sirupsen/logrus"
@@ -27,8 +24,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-
-	"gorm.io/driver/postgres"
 )
 
 func main() {
@@ -45,9 +40,15 @@ func main() {
 
 	applyMigrations(config)
 
-	go runServer(config)
+	primarySource, err := source.NewDefaultPrimary(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Store["host"], config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]))
+	if err != nil {
+		log.Fatalf("Не удалось инициализировать источник данных: %v", err)
+		return
+	}
 
-	go runApi(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Store["host"], config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]), config.ApiPort)
+	go runServer(primarySource, config)
+
+	go runApi(primarySource, config.ApiPort)
 
 	select {}
 }
@@ -106,17 +107,8 @@ func configureLogging(config config.Config) {
 	}
 }
 
-func runServer(config config.Config) {
-	connector := connector.DefaultConnector{}
-	if err := connector.Connect(config.Store); err != nil {
-		log.Fatalf("Не удалось подключиться к хранилищу: %v", err)
-		return
-	}
-
-	primarySource := src.PrimarySource{}
-	primarySource.Initialize(&connector)
-
-	primaryRepository := repo.PrimaryRepository{Source: &primarySource}
+func runServer(source source.Primary, config config.Config) {
+	primaryRepository := repo.Primary{Source: source}
 
 	savePacket := domain.SavePacket{
 		PrimaryRepository:            primaryRepository,
@@ -129,7 +121,6 @@ func runServer(config config.Config) {
 	}
 
 	defer savePacket.Shutdown()
-	defer connector.Close()
 
 	optimizeGeometry := domain.OptimizeGeometry{PrimaryRepository: primaryRepository}
 	c := cron.New()
@@ -149,19 +140,10 @@ func runServer(config config.Config) {
 	select {}
 }
 
-func runApi(dsn string, port int32) {
-	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN:                  dsn,
-		PreferSimpleProtocol: true,
-	}), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("Не удалось подключиться к базе данных: %v", err)
-		return
-	}
-	source := apisrc.New(db)
-	businessDataRepository := apirepo.NewBusinessDataSimple(source)
+func runApi(source source.Primary, port int32) {
+	businessDataRepository := apirepo.NewBusinessDataDefault(source)
 	handler := api.NewHandler(businessDataRepository)
-	additionalDataRepository := apirepo.NewAdditionalDataSimple(source)
+	additionalDataRepository := apirepo.NewAdditionalDataDefault(source)
 	getApiKeys := apidomain.GetApiKeys{
 		ApiKeysRepository: additionalDataRepository,
 	}

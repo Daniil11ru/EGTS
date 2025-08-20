@@ -1,10 +1,10 @@
 package repository
 
 import (
-	"github.com/daniil11ru/egts/cli/receiver/api/dto/db/in/filter"
-	"github.com/daniil11ru/egts/cli/receiver/api/dto/db/in/update"
-	output "github.com/daniil11ru/egts/cli/receiver/api/dto/db/out"
-	"github.com/daniil11ru/egts/cli/receiver/api/source"
+	"github.com/daniil11ru/egts/cli/receiver/dto/db/in/filter"
+	"github.com/daniil11ru/egts/cli/receiver/dto/db/in/update"
+	output "github.com/daniil11ru/egts/cli/receiver/dto/db/out"
+	"github.com/daniil11ru/egts/cli/receiver/source"
 )
 
 type BusinessData interface {
@@ -15,30 +15,30 @@ type BusinessData interface {
 	UpdateVehicleById(vehicleId int32, update update.VehicleById) error
 }
 
-type BusinessDataSimple struct {
-	PostgreSource *source.Postgre
+type BusinessDataDefault struct {
+	PostgreSource source.Primary
 }
 
-func NewBusinessDataSimple(postgreSource *source.Postgre) *BusinessDataSimple {
-	return &BusinessDataSimple{PostgreSource: postgreSource}
+func NewBusinessDataDefault(postgreSource source.Primary) *BusinessDataDefault {
+	return &BusinessDataDefault{PostgreSource: postgreSource}
 }
 
-func (r *BusinessDataSimple) GetVehicles(filter filter.Vehicles) ([]output.Vehicle, error) {
+func (r *BusinessDataDefault) GetVehicles(filter filter.Vehicles) ([]output.Vehicle, error) {
 	return r.PostgreSource.GetVehicles(filter)
 }
 
-func (r *BusinessDataSimple) GetVehicle(vehicleId int32) (output.Vehicle, error) {
+func (r *BusinessDataDefault) GetVehicle(vehicleId int32) (output.Vehicle, error) {
 	return r.PostgreSource.GetVehicle(vehicleId)
 }
 
-func (r *BusinessDataSimple) GetLocations(filter filter.Locations) ([]output.Location, error) {
+func (r *BusinessDataDefault) GetLocations(filter filter.Locations) ([]output.Location, error) {
 	return r.PostgreSource.GetLocations(filter)
 }
 
-func (r *BusinessDataSimple) UpdateVehicleById(vehicleId int32, update update.VehicleById) error {
+func (r *BusinessDataDefault) UpdateVehicleById(vehicleId int32, update update.VehicleById) error {
 	return r.PostgreSource.UpdateVehicleById(vehicleId, update)
 }
 
-func (r *BusinessDataSimple) UpdateVehicleByImei(imei string, update update.VehicleByImei) error {
+func (r *BusinessDataDefault) UpdateVehicleByImei(imei string, update update.VehicleByImei) error {
 	return r.PostgreSource.UpdateVehicleByImei(imei, update)
 }

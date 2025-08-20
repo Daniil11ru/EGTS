@@ -1,0 +1,2 @@
+ALTER TABLE vehicle
+    ALTER COLUMN imei TYPE BIGINT;

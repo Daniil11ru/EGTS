@@ -7,8 +7,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/daniil11ru/egts/cli/receiver/domain"
-	packet "github.com/daniil11ru/egts/cli/receiver/repository/util"
+	"github.com/daniil11ru/egts/cli/receiver/dto/other"
+	"github.com/daniil11ru/egts/cli/receiver/server/domain"
 	"github.com/daniil11ru/egts/libs/egts"
 	log "github.com/sirupsen/logrus"
 )
@@ -162,7 +162,7 @@ func (s *Server) handleAppData(conn net.Conn, pkg *egts.Package, receivedTimesta
 	)
 
 	for _, rec := range *pkg.ServicesFrameData.(*egts.ServiceDataSet) {
-		exportPacket := packet.NavigationRecord{}
+		exportPacket := other.PacketData{}
 
 		// TODO: узнать, нужно ли проверять Recipient Service Type
 		serviceType = rec.SourceServiceType

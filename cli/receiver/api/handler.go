@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/daniil11ru/egts/cli/receiver/api/dto/db/in/filter"
-	"github.com/daniil11ru/egts/cli/receiver/api/dto/db/in/update"
-	output "github.com/daniil11ru/egts/cli/receiver/api/dto/db/out"
-	"github.com/daniil11ru/egts/cli/receiver/api/dto/request"
-	"github.com/daniil11ru/egts/cli/receiver/api/dto/response"
 	"github.com/daniil11ru/egts/cli/receiver/api/repository"
-	"github.com/daniil11ru/egts/cli/receiver/types"
+	"github.com/daniil11ru/egts/cli/receiver/dto/db/in/filter"
+	"github.com/daniil11ru/egts/cli/receiver/dto/db/in/update"
+	"github.com/daniil11ru/egts/cli/receiver/dto/db/out"
+	"github.com/daniil11ru/egts/cli/receiver/dto/other"
+	"github.com/daniil11ru/egts/cli/receiver/dto/request"
+	"github.com/daniil11ru/egts/cli/receiver/dto/response"
 	"github.com/daniil11ru/egts/cli/receiver/util"
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
@@ -46,7 +46,7 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 	}
 
 	if moderationStatusStr := c.Query("moderation_status"); moderationStatusStr != "" {
-		moderationStatus := types.ModerationStatus(moderationStatusStr)
+		moderationStatus := other.ModerationStatus(moderationStatusStr)
 		if !moderationStatus.IsValid() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный moderation_status"})
 			return
@@ -64,14 +64,14 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 		return
 	}
 
-	resp := response.GetVehicles(util.Map(vehicles, func(item output.Vehicle) response.GetVehicle {
+	resp := response.GetVehicles(util.Map(vehicles, func(item out.Vehicle) response.GetVehicle {
 		return response.GetVehicle{
 			ID:               item.ID,
-			IMEI:             strconv.FormatInt(item.IMEI, 10),
+			IMEI:             item.IMEI,
 			OID:              item.OID,
 			Name:             item.Name,
 			ProviderID:       item.ProviderID,
-			ModerationStatus: item.ModerationStatus,
+			ModerationStatus: item.ModerationStatus.String(),
 		}
 	}))
 
@@ -93,11 +93,11 @@ func (h *Handler) GetVehicle(c *gin.Context) {
 
 	resp := response.GetVehicle{
 		ID:               vehicle.ID,
-		IMEI:             strconv.FormatInt(vehicle.IMEI, 10),
+		IMEI:             vehicle.IMEI,
 		OID:              vehicle.OID,
 		Name:             vehicle.Name,
 		ProviderID:       vehicle.ProviderID,
-		ModerationStatus: vehicle.ModerationStatus,
+		ModerationStatus: vehicle.ModerationStatus.String(),
 	}
 
 	c.JSON(http.StatusOK, resp)
@@ -121,7 +121,7 @@ func (h *Handler) GetVehiclesExcel(c *gin.Context) {
 	}
 
 	if s := c.Query("moderation_status"); s != "" {
-		ms := types.ModerationStatus(s)
+		ms := other.ModerationStatus(s)
 		if !ms.IsValid() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный moderation_status"})
 			return
@@ -155,14 +155,14 @@ func (h *Handler) GetVehiclesExcel(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		if v.OID.Valid {
-			if err := f.SetCellValue(sheet, fmt.Sprintf("C%d", row), v.OID.Int64); err != nil {
+		if v.OID != nil {
+			if err := f.SetCellValue(sheet, fmt.Sprintf("C%d", row), v.OID); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 		}
-		if v.Name.Valid {
-			if err := f.SetCellValue(sheet, fmt.Sprintf("D%d", row), v.Name.String); err != nil {
+		if v.Name != nil {
+			if err := f.SetCellValue(sheet, fmt.Sprintf("D%d", row), v.Name); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
@@ -275,7 +275,16 @@ func (h *Handler) GetLocations(c *gin.Context) {
 				Locations: []response.Location{},
 			}
 		}
-		track.Locations = append(track.Locations, response.Location{Latitude: loc.Latitude, Longitude: loc.Longitude, SentAt: loc.SentAt.Format(timeLayout), ReceivedAt: loc.ReceivedAt.Format(timeLayout)})
+		sentAt := loc.SentAt.Format(timeLayout)
+		track.Locations = append(track.Locations, response.Location{
+			Latitude:       loc.Latitude,
+			Longitude:      loc.Longitude,
+			Altitude:       loc.Altitude,
+			Direction:      loc.Direction,
+			Speed:          loc.Speed,
+			SatelliteCount: loc.SatelliteCount,
+			SentAt:         &sentAt,
+			ReceivedAt:     loc.ReceivedAt.Format(timeLayout)})
 		tracks[loc.VehicleId] = track
 	}
 

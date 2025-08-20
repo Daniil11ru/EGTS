@@ -1,6 +1,6 @@
 package domain
 
-import output "github.com/daniil11ru/egts/cli/receiver/api/dto/db/out"
+import output "github.com/daniil11ru/egts/cli/receiver/dto/db/out"
 
 type ApiKeysRepository interface {
 	GetApiKeys() ([]output.ApiKey, error)

@@ -1,0 +1,3 @@
+ALTER TABLE vehicle_movement
+    ALTER COLUMN altitude TYPE BIGINT,
+    ALTER COLUMN speed TYPE INTEGER;
