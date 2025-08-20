@@ -275,7 +275,7 @@ func (h *Handler) GetLocations(c *gin.Context) {
 				Locations: []response.Location{},
 			}
 		}
-		sentAt := loc.SentAt.Format(timeLayout)
+
 		track.Locations = append(track.Locations, response.Location{
 			OID:            loc.OID,
 			Latitude:       loc.Latitude,
@@ -284,8 +284,14 @@ func (h *Handler) GetLocations(c *gin.Context) {
 			Direction:      loc.Direction,
 			Speed:          loc.Speed,
 			SatelliteCount: loc.SatelliteCount,
-			SentAt:         &sentAt,
-			ReceivedAt:     loc.ReceivedAt.Format(timeLayout)})
+			SentAt: func() *string {
+				if loc.SentAt == nil {
+					return nil
+				}
+				s := loc.SentAt.Format(timeLayout)
+				return &s
+			}(),
+			ReceivedAt: loc.ReceivedAt.Format(timeLayout)})
 		tracks[loc.VehicleId] = track
 	}
 

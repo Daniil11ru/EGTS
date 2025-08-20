@@ -59,14 +59,22 @@ func (p *Primary) AddLocation(data *other.PacketData, vehicleId int32) (int32, e
 	speed := int32(data.Speed)
 	altitude := int64(data.Altitude)
 	oid := int64(data.OID)
+	direction := int16(data.Direction)
+	satelliteCount := int16(data.SatelliteCount)
+	sentTimestamp := time.Unix(data.SentTimestamp, 0)
+	receivedTimestamp := time.Unix(data.ReceivedTimestamp, 0)
 
 	return p.Source.AddLocation(insert.Location{
-		VehicleId: vehicleId,
-		OID:       oid,
-		Latitude:  data.Latitude,
-		Longitude: data.Longitude,
-		Speed:     &speed,
-		Altitude:  &altitude,
+		VehicleId:      vehicleId,
+		OID:            oid,
+		Latitude:       data.Latitude,
+		Longitude:      data.Longitude,
+		Altitude:       &altitude,
+		Direction:      &direction,
+		Speed:          &speed,
+		SatelliteCount: &satelliteCount,
+		SentAt:         &sentTimestamp,
+		ReceivedAt:     receivedTimestamp,
 	})
 }
 

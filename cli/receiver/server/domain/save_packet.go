@@ -203,7 +203,7 @@ func (s *SavePacket) Run(data *util.PacketData, providerID int32) error {
 
 	oid := data.OID
 
-	month := int(time.Now().UTC().Month())
+	month := int(time.Now().Local().Month())
 	if month < s.AddVehicleMovementMonthStart || month > s.AddVehicleMovementMonthEnd {
 		logrus.Debug("Запись телематических данных в текущий месяц запрещена")
 		return nil

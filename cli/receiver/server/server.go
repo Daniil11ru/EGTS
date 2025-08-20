@@ -139,7 +139,7 @@ func (s *Server) readPacket(conn net.Conn) ([]byte, error) {
 
 func (s *Server) decodePacket(packet []byte) (*egts.Package, int64, uint8, error) {
 	pkg := egts.Package{}
-	receivedTimestamp := time.Now().UTC().Unix()
+	receivedTimestamp := time.Now().Unix()
 	resultCode, err := pkg.Decode(packet)
 	return &pkg, receivedTimestamp, resultCode, err
 }

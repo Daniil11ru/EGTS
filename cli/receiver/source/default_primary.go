@@ -34,7 +34,7 @@ func NewDefaultPrimary(dsn string) (*DefaultPrimary, error) {
 func (s *DefaultPrimary) GetVehicles(filter filter.Vehicles) ([]out.Vehicle, error) {
 	var vehicles []out.Vehicle
 
-	q := s.db.Table("vehicle").Select("id, imei, oid, name, provider_id, moderation_status")
+	q := s.db.Table("vehicle").Select(`id, imei, "oid", name, provider_id, moderation_status`)
 
 	if filter.ProviderId != nil {
 		q = q.Where("provider_id = ?", *filter.ProviderId)
@@ -49,7 +49,7 @@ func (s *DefaultPrimary) GetVehicles(filter filter.Vehicles) ([]out.Vehicle, err
 	}
 
 	if filter.OID != nil {
-		q = q.Where("oid = ?", *filter.OID)
+		q = q.Where(`"oid" = ?`, *filter.OID)
 	}
 
 	if err := q.Scan(&vehicles).Error; err != nil {
@@ -84,7 +84,7 @@ func (s *DefaultPrimary) AddVehicle(v insert.Vehicle) (int32, error) {
 func (s *DefaultPrimary) GetVehicle(id int32) (out.Vehicle, error) {
 	var vehicle out.Vehicle
 
-	q := s.db.Table("vehicle").Select("id, imei, oid, name, provider_id, moderation_status").Where("id = ?", id)
+	q := s.db.Table("vehicle").Select(`id, imei, "oid", name, provider_id, moderation_status`).Where("id = ?", id)
 
 	if err := q.Scan(&vehicle).Error; err != nil {
 		return out.Vehicle{}, err
@@ -107,7 +107,7 @@ func (s *DefaultPrimary) GetLocations(filter filter.Locations) ([]out.Location, 
 	sub := s.db.Table("location").Select(`
                id,
                vehicle_id,
-               oid,
+               "oid",
                latitude,
                longitude,
                altitude,
@@ -136,7 +136,7 @@ func (s *DefaultPrimary) GetLocations(filter filter.Locations) ([]out.Location, 
 
 	q := s.db.Table("(?) AS ranked", sub).
 		Where("rn <= ?", filter.LocationsLimit).
-		Select("id, vehicle_id, oid, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at").
+		Select(`id, vehicle_id, "oid", latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at`).
 		Order("vehicle_id, sent_at DESC")
 
 	if err := q.Scan(&locations).Error; err != nil {
@@ -167,6 +167,7 @@ func (s *DefaultPrimary) UpdateVehicleByImei(imei string, update update.VehicleB
 		return nil
 	}
 
+	// TODO: заменить Find на Pluck
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var ids []int32
 		if err := tx.Table("vehicle").
@@ -222,11 +223,26 @@ func (s *DefaultPrimary) AddLocation(in insert.Location) (int32, error) {
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 		RETURNING id
 	`
+
+	loc, err := time.LoadLocation("Europe/Moscow")
+	if err != nil {
+		return 0, err
+	}
+
+	var sentAt any
+	if in.SentAt != nil {
+		s := in.SentAt.In(loc).Format("2006-01-02 15:04:05.999999")
+		sentAt = s
+	} else {
+		sentAt = nil
+	}
+	receivedAt := in.ReceivedAt.In(loc).Format("2006-01-02 15:04:05.999999")
+
 	var id int32
-	err := s.db.Raw(
+	err = s.db.Raw(
 		q,
 		in.VehicleId, in.OID, in.Latitude, in.Longitude, in.Altitude,
-		in.Direction, in.Speed, in.SatelliteCount, in.SentAt, in.ReceivedAt,
+		in.Direction, in.Speed, in.SatelliteCount, sentAt, receivedAt,
 	).Scan(&id).Error
 	if err != nil {
 		return 0, err
