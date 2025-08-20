@@ -5,7 +5,7 @@ import (
 )
 
 type Vehicles struct {
-	ProviderID       *int32
+	ProviderId       *int32
 	ModerationStatus *other.ModerationStatus
 	IMEI             *string
 	OID              *int64

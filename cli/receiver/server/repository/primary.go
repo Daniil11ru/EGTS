@@ -26,13 +26,13 @@ func (p *Primary) GetVehicleModerationStatus(id int32) (other.ModerationStatus, 
 }
 
 func (p *Primary) GetVehiclesByProviderId(providerId int32) ([]out.Vehicle, error) {
-	return p.Source.GetVehicles(filter.Vehicles{ProviderID: &providerId})
+	return p.Source.GetVehicles(filter.Vehicles{ProviderId: &providerId})
 }
 
 func (p *Primary) GetVehiclesByOIDAndProviderId(oid int64, providerId int32) ([]out.Vehicle, error) {
 	return p.Source.GetVehicles(filter.Vehicles{
 		OID:        &oid,
-		ProviderID: &providerId,
+		ProviderId: &providerId,
 	})
 }
 
@@ -40,7 +40,7 @@ func (p *Primary) AddIndefiniteVehicle(oid int64, providerId int32) (int32, erro
 	return p.Source.AddVehicle(insert.Vehicle{
 		IMEI:             strconv.FormatInt(oid, 10),
 		OID:              &oid,
-		ProviderID:       providerId,
+		ProviderId:       providerId,
 		ModerationStatus: other.ModerationStatusPending,
 	})
 }
@@ -68,7 +68,7 @@ func (p *Primary) AddLocation(data *other.PacketData, vehicleId int32) (int32, e
 	})
 }
 
-func (p *Primary) GetLastVehiclePosition(vehicleId int32) (out.Point, error) {
+func (p *Primary) GetLastVehiclePoint(vehicleId int32) (out.Point, error) {
 	return p.Source.GetLastVehiclePoint(vehicleId)
 }
 

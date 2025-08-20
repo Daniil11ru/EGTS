@@ -33,7 +33,7 @@ func (domain *SavePacket) fillVehicleIdToLastPosition() error {
 	}
 
 	for i := 0; i < len(vehicles); i++ {
-		lastPosition, getLastPositionErr := domain.PrimaryRepository.GetLastVehiclePosition(vehicles[i].ID)
+		lastPosition, getLastPositionErr := domain.PrimaryRepository.GetLastVehiclePoint(vehicles[i].ID)
 		if getLastPositionErr == nil {
 			domain.vehicleIdToLastPosition[vehicles[i].ID] = lastPosition
 		}
@@ -242,13 +242,16 @@ func (s *SavePacket) Run(data *util.PacketData, providerID int32) error {
 	currentPosition := out.Point{Latitude: data.Latitude, Longitude: data.Longitude, Altitude: &altitude}
 	lastPosition, OK := s.vehicleIdToLastPosition[vehicleID]
 	if OK {
-		accuracy_meters := 10.0
+		accuracyMeters := 10.0
 
 		equals := false
-		if *currentPosition.Altitude == 0 || *lastPosition.Altitude == 0 {
-			equals = lastPosition.EqualsHorizontallyTo(&currentPosition, accuracy_meters)
+		if currentPosition.Altitude == nil || lastPosition.Altitude == nil || *currentPosition.Altitude == 0 || *lastPosition.Altitude == 0 {
+			equals, err = lastPosition.EqualsHorizontallyTo(&currentPosition, accuracyMeters)
 		} else {
-			equals = lastPosition.EqualsTo(&currentPosition, accuracy_meters)
+			equals, err = lastPosition.EqualsTo(&currentPosition, accuracyMeters)
+		}
+		if err != nil {
+			return fmt.Errorf("не удалось оценить расстояние между новым и предыдущим местоположением для транспорта с ID %d: %w", vehicleID, err)
 		}
 
 		if equals {

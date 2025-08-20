@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/daniil11ru/egts/cli/receiver/api"
-	apirepo "github.com/daniil11ru/egts/cli/receiver/api/repository"
+	arepo "github.com/daniil11ru/egts/cli/receiver/api/repository"
 	"github.com/daniil11ru/egts/cli/receiver/config"
 	"github.com/daniil11ru/egts/cli/receiver/server"
 	"github.com/daniil11ru/egts/cli/receiver/server/domain"
-	repo "github.com/daniil11ru/egts/cli/receiver/server/repository"
+	srepo "github.com/daniil11ru/egts/cli/receiver/server/repository"
 	"github.com/daniil11ru/egts/cli/receiver/source"
 	"github.com/daniil11ru/egts/cli/receiver/util"
 	"github.com/robfig/cron"
@@ -171,7 +171,7 @@ func configureLogging(settings LoggingSettings) {
 }
 
 func runServer(source source.Primary, settings ServerSettings) {
-	primaryRepository := repo.Primary{Source: source}
+	primaryRepository := srepo.Primary{Source: source}
 
 	savePacket, err := domain.NewSavePacket(
 		primaryRepository,
@@ -204,9 +204,9 @@ func runServer(source source.Primary, settings ServerSettings) {
 }
 
 func runApi(source source.Primary, apiSettings ApiSettings) {
-	businessDataRepository := apirepo.NewBusinessDataDefault(source)
+	businessDataRepository := arepo.NewBusinessDataDefault(source)
 	handler := api.NewHandler(businessDataRepository)
-	additionalDataRepository := apirepo.NewAdditionalDataDefault(source)
+	additionalDataRepository := arepo.NewAdditionalDataDefault(source)
 	controller, err := api.NewController(handler, additionalDataRepository)
 	if err != nil {
 		log.Fatalf("Не удалось создать контроллер API: %v", err)

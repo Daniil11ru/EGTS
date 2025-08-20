@@ -3,7 +3,7 @@ package out
 import "time"
 
 type Location struct {
-	Id             int32      `json:"id"`
+	ID             int32      `json:"id"`
 	VehicleId      int32      `json:"vehicle_id"`
 	Latitude       float64    `json:"latitude"`
 	Longitude      float64    `json:"longitude"`

@@ -1,6 +1,9 @@
 package out
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 type Point struct {
 	LocationId int32   `json:"location_id"`
@@ -9,9 +12,9 @@ type Point struct {
 	Altitude   *int64  `json:"altitude"`
 }
 
-func (p *Point) EqualsTo(position *Point, accuracy_meters float64) bool {
+func (p *Point) EqualsTo(position *Point, accuracy_meters float64) (bool, error) {
 	if p == nil || position == nil || p.Altitude == nil || position.Altitude == nil {
-		return false
+		return false, fmt.Errorf("точки и их составные части не должны быть nil")
 	}
 	const R = 6371000.0
 	lat1 := p.Latitude * math.Pi / 180
@@ -29,12 +32,12 @@ func (p *Point) EqualsTo(position *Point, accuracy_meters float64) bool {
 		altDiff = -altDiff
 	}
 	dist := math.Sqrt(horiz*horiz + altDiff*altDiff)
-	return dist <= accuracy_meters
+	return dist <= accuracy_meters, nil
 }
 
-func (p *Point) EqualsHorizontallyTo(position *Point, accuracy_meters float64) bool {
+func (p *Point) EqualsHorizontallyTo(position *Point, accuracy_meters float64) (bool, error) {
 	if p == nil || position == nil {
-		return false
+		return false, fmt.Errorf("точки не должны быть nil")
 	}
 	const R = 6371000.0
 	lat1 := p.Latitude * math.Pi / 180
@@ -46,5 +49,5 @@ func (p *Point) EqualsHorizontallyTo(position *Point, accuracy_meters float64) b
 		math.Cos(lat1)*math.Cos(lat2)*math.Sin(dLon/2)*math.Sin(dLon/2)
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 	dist := R * c
-	return dist <= accuracy_meters
+	return dist <= accuracy_meters, nil
 }

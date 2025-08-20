@@ -11,7 +11,7 @@ type Vehicle struct {
 	IMEI             string                 `json:"imei"`
 	OID              *int64                 `json:"oid,omitempty" gorm:"column:oid"`
 	Name             *string                `json:"name,omitempty"`
-	ProviderID       int32                  `json:"provider_id"`
+	ProviderId       int32                  `json:"provider_id"`
 	ModerationStatus other.ModerationStatus `json:"moderation_status"`
 }
 

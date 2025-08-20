@@ -38,7 +38,7 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 				return
 			}
 			providerId32 := int32(providerId)
-			getVehiclesFilter.ProviderID = &providerId32
+			getVehiclesFilter.ProviderId = &providerId32
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный provider_id"})
 			return
@@ -70,7 +70,7 @@ func (h *Handler) GetVehicles(c *gin.Context) {
 			IMEI:             item.IMEI,
 			OID:              item.OID,
 			Name:             item.Name,
-			ProviderID:       item.ProviderID,
+			ProviderID:       item.ProviderId,
 			ModerationStatus: item.ModerationStatus.String(),
 		}
 	}))
@@ -96,7 +96,7 @@ func (h *Handler) GetVehicle(c *gin.Context) {
 		IMEI:             vehicle.IMEI,
 		OID:              vehicle.OID,
 		Name:             vehicle.Name,
-		ProviderID:       vehicle.ProviderID,
+		ProviderID:       vehicle.ProviderId,
 		ModerationStatus: vehicle.ModerationStatus.String(),
 	}
 
@@ -117,7 +117,7 @@ func (h *Handler) GetVehiclesExcel(c *gin.Context) {
 			return
 		}
 		id := int32(v)
-		getVehiclesFilter.ProviderID = &id
+		getVehiclesFilter.ProviderId = &id
 	}
 
 	if s := c.Query("moderation_status"); s != "" {
@@ -167,7 +167,7 @@ func (h *Handler) GetVehiclesExcel(c *gin.Context) {
 				return
 			}
 		}
-		if err := f.SetCellValue(sheet, fmt.Sprintf("E%d", row), v.ProviderID); err != nil {
+		if err := f.SetCellValue(sheet, fmt.Sprintf("E%d", row), v.ProviderId); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -217,7 +217,7 @@ func (h *Handler) GetLocations(c *gin.Context) {
 				return
 			}
 			vehicleId32 := int32(vehicleId)
-			getLocationsFilter.VehicleID = &vehicleId32
+			getLocationsFilter.VehicleId = &vehicleId32
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный vehicle_id"})
 			return

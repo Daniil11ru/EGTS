@@ -36,8 +36,8 @@ func (s *DefaultPrimary) GetVehicles(filter filter.Vehicles) ([]out.Vehicle, err
 
 	q := s.db.Table("vehicle").Select("id, imei, oid, name, provider_id, moderation_status")
 
-	if filter.ProviderID != nil {
-		q = q.Where("provider_id = ?", *filter.ProviderID)
+	if filter.ProviderId != nil {
+		q = q.Where("provider_id = ?", *filter.ProviderId)
 	}
 
 	if filter.ModerationStatus != nil {
@@ -60,7 +60,7 @@ func (s *DefaultPrimary) GetVehicles(filter filter.Vehicles) ([]out.Vehicle, err
 }
 
 func (s *DefaultPrimary) AddVehicle(v insert.Vehicle) (int32, error) {
-	if v.IMEI == "" || v.ProviderID <= 0 || v.ModerationStatus == "" {
+	if v.IMEI == "" || v.ProviderId <= 0 || v.ModerationStatus == "" {
 		return 0, fmt.Errorf("IMEI, ID провайдера и статус модерации не могут быть пустыми")
 	}
 
@@ -74,7 +74,7 @@ func (s *DefaultPrimary) AddVehicle(v insert.Vehicle) (int32, error) {
 		RETURNING id
 	`
 	var id int32
-	if err := s.db.Exec(q, v.IMEI, v.OID, v.Name, v.ProviderID, v.ModerationStatus).Scan(&id).Error; err != nil {
+	if err := s.db.Exec(q, v.IMEI, v.OID, v.Name, v.ProviderId, v.ModerationStatus).Scan(&id).Error; err != nil {
 		return 0, err
 	}
 
@@ -117,8 +117,8 @@ func (s *DefaultPrimary) GetLocations(filter filter.Locations) ([]out.Location, 
 		received_at,
 		ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY sent_at DESC) AS rn`)
 
-	if filter.VehicleID != nil {
-		sub = sub.Where("vehicle_id = ?", *filter.VehicleID)
+	if filter.VehicleId != nil {
+		sub = sub.Where("vehicle_id = ?", *filter.VehicleId)
 	}
 	if filter.SentBefore != nil {
 		sub = sub.Where("sent_at < ?", *filter.SentBefore)

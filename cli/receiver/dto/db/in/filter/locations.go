@@ -3,7 +3,7 @@ package filter
 import "time"
 
 type Locations struct {
-	VehicleID      *int32
+	VehicleId      *int32
 	SentBefore     *time.Time
 	SentAfter      *time.Time
 	ReceivedBefore *time.Time
