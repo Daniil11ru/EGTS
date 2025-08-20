@@ -42,14 +42,20 @@ func (domain *SavePacket) fillVehicleIdToLastPosition() error {
 	return nil
 }
 
-func (domain *SavePacket) Initialize() error {
+func NewSavePacket(primaryRepository repository.Primary, addVehicleMovementStart int, addVehicleMovementEnd int) (*SavePacket, error) {
+	domain := SavePacket{
+		PrimaryRepository:            primaryRepository,
+		AddVehicleMovementMonthStart: addVehicleMovementStart,
+		AddVehicleMovementMonthEnd:   addVehicleMovementEnd,
+	}
+
 	if err := domain.fillVehicleIdToLastPosition(); err != nil {
-		return fmt.Errorf("не удалось инициализировать кэш транспорта: %w", err)
+		return nil, fmt.Errorf("не удалось инициализировать кэш транспорта: %w", err)
 	}
 
 	loc, loadLocationErr := time.LoadLocation("Europe/Moscow")
 	if loadLocationErr != nil {
-		return fmt.Errorf("не удалось загрузить временную зону Europe/Moscow: %w", loadLocationErr)
+		return nil, fmt.Errorf("не удалось загрузить временную зону Europe/Moscow: %w", loadLocationErr)
 	}
 	domain.cronScheduler = cron.New(cron.WithLocation(loc))
 
@@ -63,13 +69,13 @@ func (domain *SavePacket) Initialize() error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("ошибка при настройке cron-задачи: %w", err)
+		return nil, fmt.Errorf("ошибка при настройке cron-задачи: %w", err)
 	}
 
 	domain.cronScheduler.Start()
 	logrus.Info("Запланировано ежедневное обновление кэша провайдеров в 03:00")
 
-	return nil
+	return &domain, nil
 }
 
 func (domain *SavePacket) Shutdown() {
@@ -167,12 +173,12 @@ func (domain *SavePacket) filterVehiclesByOID(OID int64, vehicles []out.Vehicle)
 }
 
 func (s *SavePacket) findVehicles(OID int64, providerID int32) ([]out.Vehicle, error) {
-	vehicles, err := s.PrimaryRepository.GetVehiclesByOIDAndProviderID(OID, providerID)
+	vehicles, err := s.PrimaryRepository.GetVehiclesByOIDAndProviderId(OID, providerID)
 	if err == nil {
 		return vehicles, nil
 	}
 
-	vehicles, err = s.PrimaryRepository.GetVehiclesByProviderID(providerID)
+	vehicles, err = s.PrimaryRepository.GetVehiclesByProviderId(providerID)
 	if err != nil {
 		return []out.Vehicle{}, err
 	}
@@ -220,7 +226,7 @@ func (s *SavePacket) Run(data *util.PacketData, providerID int32) error {
 		vehicleID = vehicles[0].ID
 
 		// FIXME: нужно обновлять только тогда, когда OID действительно отсутствует
-		s.PrimaryRepository.UpdateVehicleOID(vehicleID, int64(oid))
+		s.PrimaryRepository.UpdateVehicleOid(vehicleID, int64(oid))
 	}
 
 	moderationStatus, err := s.resolveModerationStatus(vehicleID)

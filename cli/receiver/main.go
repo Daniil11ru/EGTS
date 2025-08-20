@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/daniil11ru/egts/cli/receiver/api"
-	apidomain "github.com/daniil11ru/egts/cli/receiver/api/domain"
 	apirepo "github.com/daniil11ru/egts/cli/receiver/api/repository"
 	"github.com/daniil11ru/egts/cli/receiver/config"
 	"github.com/daniil11ru/egts/cli/receiver/server"
@@ -26,6 +27,54 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
+type ServerSettings struct {
+	Host                           string
+	Ports                          map[int32]int
+	ConnectionTtl                  int
+	SaveTelematicsDataMonthStart   int
+	SaveTelematicsDataMonthEnd     int
+	OptimizeGeometryCronExpression string
+}
+
+func (s *ServerSettings) GetEmptyConnectionTtl() time.Duration {
+	return time.Duration(s.ConnectionTtl) * time.Second
+}
+func (s *ServerSettings) GetListenAddresses() map[int32]string {
+	addresses := make(map[int32]string)
+	for providerID, port := range s.Ports {
+		addresses[providerID] = s.Host + ":" + strconv.Itoa(int(port))
+	}
+	return addresses
+}
+
+type ApiSettings struct {
+	Port int
+}
+
+type LoggingSettings struct {
+	LogLevel      string
+	LogFilePath   string
+	LogMaxAgeDays int
+}
+
+func (s *LoggingSettings) GetLogLevel() log.Level {
+	var lvl log.Level
+
+	switch s.LogLevel {
+	case "DEBUG":
+		lvl = log.DebugLevel
+	case "INFO":
+		lvl = log.InfoLevel
+	case "WARN":
+		lvl = log.WarnLevel
+	case "ERROR":
+		lvl = log.ErrorLevel
+	default:
+		lvl = log.InfoLevel
+	}
+	return lvl
+}
+
 func main() {
 	configFilePath := ""
 	flag.StringVar(&configFilePath, "c", "", "")
@@ -36,9 +85,14 @@ func main() {
 		return
 	}
 
-	configureLogging(config)
+	configureLogging(LoggingSettings{
+		LogLevel:      config.LogLevel,
+		LogFilePath:   config.LogFilePath,
+		LogMaxAgeDays: config.LogMaxAgeDays,
+	})
 
-	applyMigrations(config)
+	applyMigrations(fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		config.Store["user"], config.Store["password"], config.Store["host"], config.Store["port"], config.Store["database"], config.Store["sslmode"]), config.MigrationsPath)
 
 	primarySource, err := source.NewDefaultPrimary(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", config.Store["host"], config.Store["user"], config.Store["password"], config.Store["database"], config.Store["port"], config.Store["sslmode"]))
 	if err != nil {
@@ -46,9 +100,18 @@ func main() {
 		return
 	}
 
-	go runServer(primarySource, config)
+	go runServer(primarySource, ServerSettings{
+		Host:                           config.Host,
+		Ports:                          config.Ports,
+		ConnectionTtl:                  config.ConnectionTtl,
+		SaveTelematicsDataMonthStart:   config.SaveTelematicsDataMonthStart,
+		SaveTelematicsDataMonthEnd:     config.SaveTelematicsDataMonthEnd,
+		OptimizeGeometryCronExpression: config.OptimizeGeometryCronExpression,
+	})
 
-	go runApi(primarySource, config.ApiPort)
+	go runApi(primarySource, ApiSettings{
+		Port: config.ApiPort,
+	})
 
 	select {}
 }
@@ -69,15 +132,15 @@ func getConfig(configFilePath string) (config.Config, error) {
 	return c, nil
 }
 
-func configureLogging(config config.Config) {
-	log.SetLevel(config.GetLogLevel())
+func configureLogging(settings LoggingSettings) {
+	log.SetLevel(settings.GetLogLevel())
 
 	consoleFmt := &log.TextFormatter{ForceColors: true, FullTimestamp: false}
 	log.SetFormatter(consoleFmt)
 	log.SetOutput(os.Stdout)
 
-	if config.LogFilePath != "" {
-		logDir := filepath.Dir(config.LogFilePath)
+	if settings.LogFilePath != "" {
+		logDir := filepath.Dir(settings.LogFilePath)
 		if _, err := os.Stat(logDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 				log.Fatalf("Не получилось создать директорию для логов: %v", err)
@@ -85,10 +148,10 @@ func configureLogging(config config.Config) {
 		}
 
 		lumberjackLogger := &lumberjack.Logger{
-			Filename:   config.LogFilePath,
+			Filename:   settings.LogFilePath,
 			MaxSize:    100,
 			MaxBackups: 366,
-			MaxAge:     config.LogMaxAgeDays,
+			MaxAge:     settings.LogMaxAgeDays,
 			Compress:   true,
 		}
 
@@ -107,15 +170,15 @@ func configureLogging(config config.Config) {
 	}
 }
 
-func runServer(source source.Primary, config config.Config) {
+func runServer(source source.Primary, settings ServerSettings) {
 	primaryRepository := repo.Primary{Source: source}
 
-	savePacket := domain.SavePacket{
-		PrimaryRepository:            primaryRepository,
-		AddVehicleMovementMonthStart: config.GetSaveTelematicsDataMonthStart(),
-		AddVehicleMovementMonthEnd:   config.GetSaveTelematicsDataMonthEnd(),
-	}
-	if err := savePacket.Initialize(); err != nil {
+	savePacket, err := domain.NewSavePacket(
+		primaryRepository,
+		settings.SaveTelematicsDataMonthStart,
+		settings.SaveTelematicsDataMonthEnd,
+	)
+	if err != nil {
 		log.Fatalf("Не удалось инициализировать кэш: %v", err)
 		return
 	}
@@ -124,12 +187,12 @@ func runServer(source source.Primary, config config.Config) {
 
 	optimizeGeometry := domain.OptimizeGeometry{PrimaryRepository: primaryRepository}
 	c := cron.New()
-	c.AddFunc(config.OptimizeGeometryCronExpression, func() { optimizeGeometry.Run() })
+	c.AddFunc(settings.OptimizeGeometryCronExpression, func() { optimizeGeometry.Run() })
 	c.Start()
 	log.Info("Запланирована ежедневная оптимизация геометрии треков")
 
-	for providerID, addr := range config.GetListenAddresses() {
-		srv := server.NewServer(addr, config.GetEmptyConnectionTTL(), providerID, &savePacket)
+	for providerID, addr := range settings.GetListenAddresses() {
+		srv := server.NewServer(addr, settings.GetEmptyConnectionTtl(), providerID, savePacket)
 		go func(a string, s *server.Server) {
 			if err := s.Run(); err != nil {
 				log.Fatalf("Не удалось запустить сервер на %s: %v", a, err)
@@ -140,31 +203,25 @@ func runServer(source source.Primary, config config.Config) {
 	select {}
 }
 
-func runApi(source source.Primary, port int32) {
+func runApi(source source.Primary, apiSettings ApiSettings) {
 	businessDataRepository := apirepo.NewBusinessDataDefault(source)
 	handler := api.NewHandler(businessDataRepository)
 	additionalDataRepository := apirepo.NewAdditionalDataDefault(source)
-	getApiKeys := apidomain.GetApiKeys{
-		ApiKeysRepository: additionalDataRepository,
-	}
-	controller, err := api.NewController(handler, &getApiKeys)
+	controller, err := api.NewController(handler, additionalDataRepository)
 	if err != nil {
 		log.Fatalf("Не удалось создать контроллер API: %v", err)
 		return
 	}
-	log.Infof("Запуск API на порту %d", port)
-	err = controller.Run(port)
+	log.Infof("Запуск API на порту %d", apiSettings.Port)
+	err = controller.Run(apiSettings.Port)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func applyMigrations(config config.Config) error {
-	databaseUrl := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		config.Store["user"], config.Store["password"], config.Store["host"], config.Store["port"], config.Store["database"], config.Store["sslmode"])
-
+func applyMigrations(databaseUrl, migrationsPath string) error {
 	m, err := migrate.New(
-		config.MigrationsPath,
+		migrationsPath,
 		databaseUrl,
 	)
 	if err != nil {

@@ -104,7 +104,7 @@ func (s *DefaultPrimary) GetProviders() ([]out.Provider, error) {
 func (s *DefaultPrimary) GetLocations(filter filter.Locations) ([]out.Location, error) {
 	var locations []out.Location
 
-	sub := s.db.Table("vehicle_movement").Select(`
+	sub := s.db.Table("location").Select(`
 		id,
 		vehicle_id,
 		latitude,
@@ -214,7 +214,7 @@ func (s *DefaultPrimary) UpdateVehicleById(id int32, update update.VehicleById) 
 
 func (s *DefaultPrimary) AddLocation(insert insert.Location) (int32, error) {
 	const q = `
-		INSERT INTO vehicle_movement (vehicle_id, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at)
+		INSERT INTO location (vehicle_id, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		RETURNING id
 	`
@@ -229,7 +229,7 @@ func (s *DefaultPrimary) AddLocation(insert insert.Location) (int32, error) {
 func (s *DefaultPrimary) GetLastVehiclePoint(id int32) (out.Point, error) {
 	var point out.Point
 
-	res := s.db.Table("vehicle_movement").
+	res := s.db.Table("location").
 		Select("id AS location_id, latitude, longitude, altitude").
 		Where("vehicle_id = ? AND sent_at IS NOT NULL", id).
 		Order("sent_at DESC").
@@ -243,7 +243,7 @@ func (s *DefaultPrimary) GetLastVehiclePoint(id int32) (out.Point, error) {
 }
 
 func (s *DefaultPrimary) GetTracks(after, before time.Time) ([]out.Track, error) {
-	rows, err := s.db.Table("vehicle_movement").
+	rows, err := s.db.Table("location").
 		Select("id, vehicle_id, latitude, longitude, altitude").
 		Where("received_at BETWEEN ? AND ? AND latitude IS NOT NULL AND longitude IS NOT NULL", after, before).
 		Order("vehicle_id, received_at ASC").
@@ -294,7 +294,7 @@ func (s *DefaultPrimary) GetTracks(after, before time.Time) ([]out.Track, error)
 }
 
 func (s *DefaultPrimary) DeleteLocation(id int32) error {
-	res := s.db.Exec("DELETE FROM vehicle_movement WHERE id = ?", id)
+	res := s.db.Exec("DELETE FROM location WHERE id = ?", id)
 	if res.Error != nil {
 		return fmt.Errorf("ошибка выполнения запроса удаления: %v", res.Error)
 	}

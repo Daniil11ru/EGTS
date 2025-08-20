@@ -25,29 +25,29 @@ func (p *Primary) GetVehicleModerationStatus(id int32) (other.ModerationStatus, 
 	return vehicle.ModerationStatus, err
 }
 
-func (p *Primary) GetVehiclesByProviderID(providerId int32) ([]out.Vehicle, error) {
+func (p *Primary) GetVehiclesByProviderId(providerId int32) ([]out.Vehicle, error) {
 	return p.Source.GetVehicles(filter.Vehicles{ProviderID: &providerId})
 }
 
-func (p *Primary) GetVehiclesByOIDAndProviderID(OID int64, providerId int32) ([]out.Vehicle, error) {
+func (p *Primary) GetVehiclesByOIDAndProviderId(oid int64, providerId int32) ([]out.Vehicle, error) {
 	return p.Source.GetVehicles(filter.Vehicles{
-		OID:        &OID,
+		OID:        &oid,
 		ProviderID: &providerId,
 	})
 }
 
-func (p *Primary) AddIndefiniteVehicle(OID int64, providerId int32) (int32, error) {
+func (p *Primary) AddIndefiniteVehicle(oid int64, providerId int32) (int32, error) {
 	return p.Source.AddVehicle(insert.Vehicle{
-		IMEI:             strconv.FormatInt(OID, 10),
-		OID:              &OID,
+		IMEI:             strconv.FormatInt(oid, 10),
+		OID:              &oid,
 		ProviderID:       providerId,
 		ModerationStatus: other.ModerationStatusPending,
 	})
 }
 
-func (p *Primary) UpdateVehicleOID(id int32, OID int64) error {
+func (p *Primary) UpdateVehicleOid(id int32, oid int64) error {
 	return p.Source.UpdateVehicleById(id, update.VehicleById{
-		OID: &OID,
+		OID: &oid,
 	})
 }
 

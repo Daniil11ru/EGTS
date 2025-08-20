@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/daniil11ru/egts/cli/receiver/api/domain"
 	"github.com/daniil11ru/egts/cli/receiver/dto/db/out"
 	"github.com/daniil11ru/egts/cli/receiver/util"
 	"github.com/gin-contrib/cors"
@@ -17,14 +16,18 @@ import (
 )
 
 type Controller struct {
-	Handler      *Handler
-	Router       *gin.Engine
-	GetApiKeys   *domain.GetApiKeys
-	ApiKeyHashes []string
+	Handler           *Handler
+	Router            *gin.Engine
+	ApiKeysRepository ApiKeysRepository
+	ApiKeyHashes      []string
 }
 
-func NewController(handler *Handler, getApiKeys *domain.GetApiKeys) (*Controller, error) {
-	ApiKeyAttributes, err := getApiKeys.Run()
+type ApiKeysRepository interface {
+	GetApiKeys() ([]out.ApiKey, error)
+}
+
+func NewController(handler *Handler, apiKeysRepository ApiKeysRepository) (*Controller, error) {
+	ApiKeyAttributes, err := apiKeysRepository.GetApiKeys()
 	if err != nil {
 		return nil, fmt.Errorf("ошибка получения информации об API-ключах из базы данных: %w", err)
 	}
@@ -80,10 +83,10 @@ func NewController(handler *Handler, getApiKeys *domain.GetApiKeys) (*Controller
 		locations.GET("/", handler.GetLocations)
 	}
 
-	return &Controller{Handler: handler, Router: router, GetApiKeys: getApiKeys, ApiKeyHashes: apiKeyHashes}, nil
+	return &Controller{Handler: handler, Router: router, ApiKeysRepository: apiKeysRepository, ApiKeyHashes: apiKeyHashes}, nil
 }
 
-func (c *Controller) Run(port int32) error {
+func (c *Controller) Run(port int) error {
 	err := c.Router.Run(":" + strconv.Itoa(int(port)))
 	if err != nil {
 		return fmt.Errorf("ошибка запуска API: %w", err)

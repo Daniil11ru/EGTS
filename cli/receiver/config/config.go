@@ -2,8 +2,6 @@ package config
 
 import (
 	"os"
-	"strconv"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -12,9 +10,9 @@ import (
 
 type Config struct {
 	Host                           string            `yaml:"host"`
-	Ports                          map[int32]int32   `yaml:"ports"`
-	ApiPort                        int32             `yaml:"api_port"`
-	ConnectionTTL                  int               `yaml:"connection_ttl"`
+	Ports                          map[int32]int     `yaml:"ports"`
+	ApiPort                        int               `yaml:"api_port"`
+	ConnectionTtl                  int               `yaml:"connection_ttl"`
 	LogLevel                       string            `yaml:"log_level"`
 	LogFilePath                    string            `yaml:"log_file_path"`
 	LogMaxAgeDays                  int               `yaml:"log_max_age_days"`
@@ -23,35 +21,6 @@ type Config struct {
 	SaveTelematicsDataMonthEnd     int               `yaml:"save_telematics_data_month_end"`
 	OptimizeGeometryCronExpression string            `yaml:"optimize_geometry_cron_expression"`
 	MigrationsPath                 string            `yaml:"migrations_path"`
-}
-
-func (s *Config) GetEmptyConnectionTTL() time.Duration {
-	return time.Duration(s.ConnectionTTL) * time.Second
-}
-func (s *Config) GetListenAddresses() map[int32]string {
-	addresses := make(map[int32]string)
-	for providerID, port := range s.Ports {
-		addresses[providerID] = s.Host + ":" + strconv.Itoa(int(port))
-	}
-	return addresses
-}
-
-func (s *Config) GetLogLevel() log.Level {
-	var lvl log.Level
-
-	switch s.LogLevel {
-	case "DEBUG":
-		lvl = log.DebugLevel
-	case "INFO":
-		lvl = log.InfoLevel
-	case "WARN":
-		lvl = log.WarnLevel
-	case "ERROR":
-		lvl = log.ErrorLevel
-	default:
-		lvl = log.InfoLevel
-	}
-	return lvl
 }
 
 func NewConfig(configPath string) (Config, error) {
@@ -85,12 +54,4 @@ func NewConfig(configPath string) (Config, error) {
 	}
 
 	return c, err
-}
-
-func (s *Config) GetSaveTelematicsDataMonthStart() int {
-	return s.SaveTelematicsDataMonthStart
-}
-
-func (s *Config) GetSaveTelematicsDataMonthEnd() int {
-	return s.SaveTelematicsDataMonthEnd
 }
