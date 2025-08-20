@@ -105,17 +105,18 @@ func (s *DefaultPrimary) GetLocations(filter filter.Locations) ([]out.Location, 
 	var locations []out.Location
 
 	sub := s.db.Table("location").Select(`
-		id,
-		vehicle_id,
-		latitude,
-		longitude,
-		altitude,
-		direction,
-		speed,
-		satellite_count,
-		sent_at,
-		received_at,
-		ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY sent_at DESC) AS rn`)
+               id,
+               vehicle_id,
+               oid,
+               latitude,
+               longitude,
+               altitude,
+               direction,
+               speed,
+               satellite_count,
+               sent_at,
+               received_at,
+               ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY sent_at DESC) AS rn`)
 
 	if filter.VehicleId != nil {
 		sub = sub.Where("vehicle_id = ?", *filter.VehicleId)
@@ -135,7 +136,7 @@ func (s *DefaultPrimary) GetLocations(filter filter.Locations) ([]out.Location, 
 
 	q := s.db.Table("(?) AS ranked", sub).
 		Where("rn <= ?", filter.LocationsLimit).
-		Select("id, vehicle_id, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at").
+		Select("id, vehicle_id, oid, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at").
 		Order("vehicle_id, sent_at DESC")
 
 	if err := q.Scan(&locations).Error; err != nil {
@@ -214,12 +215,12 @@ func (s *DefaultPrimary) UpdateVehicleById(id int32, update update.VehicleById) 
 
 func (s *DefaultPrimary) AddLocation(insert insert.Location) (int32, error) {
 	const q = `
-		INSERT INTO location (vehicle_id, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		RETURNING id
-	`
+               INSERT INTO location (vehicle_id, oid, latitude, longitude, altitude, direction, speed, satellite_count, sent_at, received_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               RETURNING id
+        `
 	var id int32
-	if err := s.db.Exec(q, insert.VehicleId, insert.Latitude, insert.Longitude, insert.Altitude, insert.Direction, insert.Speed, insert.SatelliteCount, insert.SentAt, insert.ReceivedAt).Scan(&id).Error; err != nil {
+	if err := s.db.Exec(q, insert.VehicleId, insert.OID, insert.Latitude, insert.Longitude, insert.Altitude, insert.Direction, insert.Speed, insert.SatelliteCount, insert.SentAt, insert.ReceivedAt).Scan(&id).Error; err != nil {
 		return 0, err
 	}
 

@@ -58,9 +58,11 @@ func (p *Primary) GetAllProviders() ([]out.Provider, error) {
 func (p *Primary) AddLocation(data *other.PacketData, vehicleId int32) (int32, error) {
 	speed := int32(data.Speed)
 	altitude := int64(data.Altitude)
+	oid := int64(data.OID)
 
 	return p.Source.AddLocation(insert.Location{
 		VehicleId: vehicleId,
+		OID:       oid,
 		Latitude:  data.Latitude,
 		Longitude: data.Longitude,
 		Speed:     &speed,

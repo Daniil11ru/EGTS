@@ -3,6 +3,7 @@ package response
 import "encoding/json"
 
 type Location struct {
+	OID            int64   `json:"oid"`
 	Latitude       float64 `json:"latitude"`
 	Longitude      float64 `json:"longitude"`
 	Altitude       *int64  `json:"altitude,omitempty"`
@@ -15,6 +16,7 @@ type Location struct {
 
 func (l Location) MarshalJSON() ([]byte, error) {
 	type out struct {
+		OID            int64       `json:"oid"`
 		Latitude       float64     `json:"latitude"`
 		Longitude      float64     `json:"longitude"`
 		Altitude       interface{} `json:"altitude,omitempty"`
@@ -25,6 +27,7 @@ func (l Location) MarshalJSON() ([]byte, error) {
 		ReceivedAt     string      `json:"received_at"`
 	}
 	o := out{
+		OID:        l.OID,
 		Latitude:   l.Latitude,
 		Longitude:  l.Longitude,
 		SentAt:     l.SentAt,
