@@ -277,6 +277,7 @@ func (h *Handler) GetLocations(c *gin.Context) {
 		}
 		sentAt := loc.SentAt.Format(timeLayout)
 		track.Locations = append(track.Locations, response.Location{
+			OID:            loc.OID,
 			Latitude:       loc.Latitude,
 			Longitude:      loc.Longitude,
 			Altitude:       loc.Altitude,

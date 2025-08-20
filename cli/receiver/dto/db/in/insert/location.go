@@ -4,6 +4,7 @@ import "time"
 
 type Location struct {
 	VehicleId      int32      `json:"vehicle_id"`
+	OID            int64      `json:"oid"`
 	Latitude       float64    `json:"latitude"`
 	Longitude      float64    `json:"longitude"`
 	Altitude       *int64     `json:"altitude"`
