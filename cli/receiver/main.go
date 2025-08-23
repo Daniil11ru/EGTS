@@ -30,7 +30,7 @@ import (
 
 type ServerSettings struct {
 	Host                           string
-	Ports                          map[int32]int
+	ProviderIdToPort               map[int32]int
 	ConnectionTtl                  int
 	SaveTelematicsDataMonthStart   int
 	SaveTelematicsDataMonthEnd     int
@@ -42,7 +42,7 @@ func (s *ServerSettings) GetEmptyConnectionTtl() time.Duration {
 }
 func (s *ServerSettings) GetListenAddresses() map[int32]string {
 	addresses := make(map[int32]string)
-	for providerID, port := range s.Ports {
+	for providerID, port := range s.ProviderIdToPort {
 		addresses[providerID] = s.Host + ":" + strconv.Itoa(int(port))
 	}
 	return addresses
@@ -107,7 +107,7 @@ func main() {
 
 	go runServer(primarySource, ServerSettings{
 		Host:                           config.Host,
-		Ports:                          config.Ports,
+		ProviderIdToPort:               config.ProviderIdToPort,
 		ConnectionTtl:                  config.ConnectionTtl,
 		SaveTelematicsDataMonthStart:   config.SaveTelematicsDataMonthStart,
 		SaveTelematicsDataMonthEnd:     config.SaveTelematicsDataMonthEnd,

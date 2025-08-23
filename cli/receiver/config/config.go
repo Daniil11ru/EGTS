@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	Host                           string            `yaml:"host"`
-	Ports                          map[int32]int     `yaml:"ports"`
+	ProviderIdToPort               map[int32]int     `yaml:"provider_id_to_port"`
 	ApiPort                        int               `yaml:"api_port"`
 	ConnectionTtl                  int               `yaml:"connection_ttl"`
 	LogLevel                       string            `yaml:"log_level"`
